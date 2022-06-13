@@ -26,17 +26,18 @@ def main():
   df.set_index("Time", inplace=True)
 
   # np.array all whose components are zero
-  arr = np.ones((X_MAX, Y_MAX))
+  arr = np.ones((Y_MAX, X_MAX))
   # extract writing spot
   df_writing = df[df["Thickness"] != 0]
   # append writing spot
   for x, y in zip(df_writing["X cood."], df_writing["Y cood."]):
-    arr[x][y] = 0
+    arr[y][x] = 0
 
   # after processing
   arr *= 255
   # make np.array image
-  cv2.imwrite(FILE_PATH + '/' + FILE_NAME + '.png', arr)
+  #cv2.imwrite(FILE_PATH + '/out.png', arr)
+  cv2.imwrite('./out.png', arr)
 
 if __name__ == '__main__':
   main()
