@@ -5,11 +5,11 @@ import cv2
 from pathlib import Path
 import shutil
 from downsampling import downsampling
-
+import codecs
 
 def csv2nparray(csvpath, rate, x_max, y_max):
   # read CSV
-  with open(csvpath, 'r') as f:
+  with codecs.open(csvpath, 'r', encoding='utf-8', errors='ignore') as f:
     reader = csv.reader(f)
     lines = [row for row in reader]
   # cut surplus
