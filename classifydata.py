@@ -41,4 +41,4 @@ for dir in tqdm(dirs):
       output_filename = FALSE_FOLDER / f'{subject_no}-{name_no}-{i}.bmp'
       i = i + 1 if i < 7 else 0   # inclement 7 times and then initialize to 0 next time
 
-    csv2img(csv, output_filename, X_MAX, Y_MAX, DSR, RESOLUTION)
+    csv2img(csv, output_filename, X_MAX, Y_MAX, DSR, RESOLUTION, False)

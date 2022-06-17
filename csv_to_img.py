@@ -37,65 +37,81 @@ def changedpi(img, resolation):
   changed_img = cv2.resize(img, dsize=None, fx=scale, fy=scale)
 
   return changed_img
-"""
-def trimming(img):
-  up, down, left, right = -1, -1, -1, -1
-  for i, column in enumerate(img):
-    if np.all(column == 1) and up == -1:
-      pass
-    elif np.all(column == 1) and up != -1:
-      down = i
-    else:
-      if up == -1:
-        up = i
-      else:
-        continue
-      for j, element in enumerate(column):
-        if element == 1 and left == -1:
-          pass
-        elif element == 1 and left != -1:
-          right = j
-        elif left == -1:
-          left = j
-        elif left > j:
-          left = j
-        else:
-          pass
 
-  return img[up:down, left:right]
-"""
-def csv2img(input_file_path: Path, output_file_path: Path, x_max: int, y_max: int, DSR: int, resolution: int):
+def trimming(img):
+  for i, column in enumerate(img):
+    if 0 in column:
+      left = i
+      break
+    else:
+      pass
+  for i, column in enumerate(img[::-1]):
+    if 0 in column:
+      right = -i
+      break
+    else:
+      pass
+  img_T = img.T
+  for i, column in enumerate(img_T):
+    if 0 in column:
+      up = i
+      break
+    else:
+      pass
+  for i, column in enumerate(img_T[::-1]):
+    if 0 in column:
+      down = -i
+      break
+    else:
+      pass
+  return img[left:right, up:down]
+
+def csv2img(input_file_path: Path, output_file_path: Path, x_max: int, y_max: int, DSR: int, resolution: int, overwrite=True):
 
   # convert csv into np.ndarray
   arr = csv2nparray(input_file_path, DSR, x_max, y_max)
-
-  #arr_trimed = trimming(arr)
+  arr_trimed = trimming(arr)
 
   # postprocessing
   arr *= 255
+  arr_trimed *= 255
+
+  ### make "row"
+  # make folders on cwd
+  rowdata_folder = Path(output_file_path.parent / 'row' )
+  if not rowdata_folder.exists():
+    rowdata_folder.mkdir(exist_ok=True)
   # make image out of np.ndarray as a temporary file
   # cv2は日本語のパスに対応していないので、Pathオブジェクトが使えない
   # cwdを'./'と書いて一時的ファイルとして保存し、移動する
-  cv2.imwrite(f'./tmp_unchanged{output_file_path.suffix}', arr.T)
-  cv2.imwrite(f'./tmp_changed{output_file_path.suffix}', changedpi(arr, resolution).T)
-  # make folders on cwd
-  rowdata_folder = Path(output_file_path.parent / 'row' )
+  if overwrite or not (rowdata_folder / f'{output_file_path.stem}{output_file_path.suffix}').exists():
+    cv2.imwrite(f'./tmp_unchanged{output_file_path.suffix}', arr.T)
+    # move image to the right place
+    shutil.move(f'./tmp_unchanged{output_file_path.suffix}',\
+      str(rowdata_folder / f'{output_file_path.stem}{output_file_path.suffix}'))
+
+  ### make "down_sampled"
   down_sampleddata_folder = Path(output_file_path.parent / 'down_sampled')
-  if not rowdata_folder.exists():
-    rowdata_folder.mkdir(exist_ok=True)
   if not down_sampleddata_folder.exists():
     down_sampleddata_folder.mkdir(exist_ok=True)
-  # move image to the right place
-  shutil.move(f'./tmp_unchanged{output_file_path.suffix}',\
-    str(rowdata_folder / f'{output_file_path.stem}{output_file_path.suffix}'))
-  shutil.move(f'./tmp_changed{output_file_path.suffix}',\
-    str(down_sampleddata_folder / f'{output_file_path.stem}_dpichanged{output_file_path.suffix}'))
+  if overwrite or not (down_sampleddata_folder / f'{output_file_path.stem}_dpichanged{output_file_path.suffix}').exists():
+    cv2.imwrite(f'./tmp_changed{output_file_path.suffix}', changedpi(arr, resolution).T)
+    shutil.move(f'./tmp_changed{output_file_path.suffix}',\
+      str(down_sampleddata_folder / f'{output_file_path.stem}_dpichanged{output_file_path.suffix}'))
 
-  #cv2.imwrite(OUTPUT_FILE_NAME + 'trimmed.png', changedpi(arr_trimed, RESOLATION).T)
+  ### make "trimmed"
+  trimmeddata_folder = Path(output_file_path.parent / 'trimmed')
+  if not trimmeddata_folder.exists():
+    trimmeddata_folder.mkdir(exist_ok=True)
+  if overwrite or not (trimmeddata_folder / f'{output_file_path.stem}_trimmed{output_file_path.suffix}').exists():
+    cv2.imwrite(f'./tmp_trimmed{output_file_path.suffix}', changedpi(arr_trimed, resolution).T)
+    shutil.move(f'./tmp_trimmed{output_file_path.suffix}',\
+      str(trimmeddata_folder / f'{output_file_path.stem}_trimmed{output_file_path.suffix}'))
+
 
 def main():
   # filepath
-  INPUT_FILE_PATH = Path('C:/Users/Taisei/development/署名データ_copy/宮原/サインテスト２/Csv/Sign-2016-宮原悠司-1-True-1.csv')
+  INPUT_FILE_PATH = Path(r'C:\Users\Taisei\development\01b_signdata_copy\宮原\サインテスト２\Csv\Sign-2016-宮原悠司-1-True-1.csv')
   OUTPUT_FILE_PATH = Path('./out.bmp')
   # flame size
   X_MAX = 13000
