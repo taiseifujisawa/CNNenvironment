@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import csv
 import cv2
+from pathlib import Path
+import shutil
 from downsampling import downsampling
 
 
@@ -35,7 +37,7 @@ def changedpi(img, resolation):
   changed_img = cv2.resize(img, dsize=None, fx=scale, fy=scale)
 
   return changed_img
-
+"""
 def trimming(img):
   up, down, left, right = -1, -1, -1, -1
   for i, column in enumerate(img):
@@ -55,37 +57,55 @@ def trimming(img):
           right = j
         elif left == -1:
           left = j
+        elif left > j:
+          left = j
         else:
           pass
 
   return img[up:down, left:right]
+"""
+def csv2img(input_file_path: Path, output_file_path: Path, x_max: int, y_max: int, DSR: int, resolution: int):
+
+  # convert csv into np.ndarray
+  arr = csv2nparray(input_file_path, DSR, x_max, y_max)
+
+  #arr_trimed = trimming(arr)
+
+  # postprocessing
+  arr *= 255
+  # make image out of np.ndarray as a temporary file
+  # cv2は日本語のパスに対応していないので、Pathオブジェクトが使えない
+  # cwdを'./'と書いて一時的ファイルとして保存し、移動する
+  cv2.imwrite(f'./tmp_unchanged{output_file_path.suffix}', arr.T)
+  cv2.imwrite(f'./tmp_changed{output_file_path.suffix}', changedpi(arr, resolution).T)
+  # make folders on cwd
+  rowdata_folder = Path(output_file_path.parent / 'row' )
+  down_sampleddata_folder = Path(output_file_path.parent / 'down_sampled')
+  if not rowdata_folder.exists():
+    rowdata_folder.mkdir(exist_ok=True)
+  if not down_sampleddata_folder.exists():
+    down_sampleddata_folder.mkdir(exist_ok=True)
+  # move image to the right place
+  shutil.move(f'./tmp_unchanged{output_file_path.suffix}',\
+    str(rowdata_folder / f'{output_file_path.stem}{output_file_path.suffix}'))
+  shutil.move(f'./tmp_changed{output_file_path.suffix}',\
+    str(down_sampleddata_folder / f'{output_file_path.stem}_dpichanged{output_file_path.suffix}'))
+
+  #cv2.imwrite(OUTPUT_FILE_NAME + 'trimmed.png', changedpi(arr_trimed, RESOLATION).T)
 
 def main():
   # filepath
-  #FILE_PATH = 'C:/Users/Taisei/development/test/サインテスト２/Csv'
-  #FILE_NAME = 'Sign-1-藤澤大世-1-True-1.csv'
-  FILE_PATH = './csv'
-  FILE_NAME = 'Sign-1-藤澤大世-1-True-1.csv'
-  OUTPUT_FILE_NAME = './out.png'
+  INPUT_FILE_PATH = Path('C:/Users/Taisei/development/署名データ_copy/宮原/サインテスト２/Csv/Sign-2016-宮原悠司-1-True-1.csv')
+  OUTPUT_FILE_PATH = Path('./out.bmp')
   # flame size
   X_MAX = 13000
   Y_MAX = 2200
   # downsampling rate(minimum: 1)
   DSR = 10
   # target dpi
-  RESOLATION = 640 ** 2
+  RESOLUTION = 640 ** 2
 
-  # convert csv into np.ndarray
-  arr = csv2nparray(FILE_PATH + '/' + FILE_NAME, DSR, X_MAX, Y_MAX)
-  arr_trimed = trimming(arr)
-
-  # postprocessing
-  arr *= 255
-
-  # make image out of np.ndarray
-  cv2.imwrite(OUTPUT_FILE_NAME, arr.T)
-  cv2.imwrite(OUTPUT_FILE_NAME + 'dpichanged.png', changedpi(arr, RESOLATION).T)
-  cv2.imwrite(OUTPUT_FILE_NAME + 'trimmed.png', changedpi(arr_trimed, RESOLATION).T)
+  csv2img(INPUT_FILE_PATH, OUTPUT_FILE_PATH, X_MAX, Y_MAX, DSR, RESOLUTION)
 
 if __name__ == '__main__':
   main()
