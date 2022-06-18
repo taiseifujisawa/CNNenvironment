@@ -17,10 +17,14 @@ Y_MAX = 2200
 DSR = 10
 # target dpi
 RESOLUTION = 640 ** 2
+# target padding dpi
+PADDED_X = 2000
+PADDED_Y = 300
 
 # get all subjects' directories
 dirs = [dir / RELATIVE_CSV_PATH for dir in cwd.iterdir() if dir.is_dir() \
-  and dir not in [TRUE_FOLDER, FALSE_FOLDER, cwd / '__pycache__', cwd / '.git']]
+  and dir not in [TRUE_FOLDER, FALSE_FOLDER, cwd / '__pycache__', cwd / '.git',\
+    cwd / 'row', cwd / 'down_sampled', cwd / 'trimmed', cwd / 'cam']]
 
 # count 0 to 7
 i = 0
@@ -41,4 +45,4 @@ for dir in tqdm(dirs):
       output_filename = FALSE_FOLDER / f'{subject_no}-{name_no}-{i}.bmp'
       i = i + 1 if i < 7 else 0   # inclement 7 times and then initialize to 0 next time
 
-    csv2img(csv, output_filename, X_MAX, Y_MAX, DSR, RESOLUTION, False)
+    csv2img(csv, output_filename, X_MAX, Y_MAX, DSR, RESOLUTION, PADDED_X, PADDED_Y, False)

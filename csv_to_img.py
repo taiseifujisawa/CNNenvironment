@@ -7,6 +7,7 @@ import shutil
 from downsampling import downsampling
 import codecs
 
+
 def csv2nparray(csvpath, rate, x_max, y_max):
   # read CSV
   with codecs.open(csvpath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -31,12 +32,14 @@ def csv2nparray(csvpath, rate, x_max, y_max):
 
   return arr
 
+
 def changedpi(img, resolation):
   h, w = img.shape
   scale = (resolation / (w * h)) **0.5
   changed_img = cv2.resize(img, dsize=None, fx=scale, fy=scale)
 
   return changed_img
+
 
 def trimming(img):
   for i, column in enumerate(img):
@@ -64,17 +67,34 @@ def trimming(img):
       break
     else:
       pass
+
   return img[left:right, up:down]
 
-def csv2img(input_file_path: Path, output_file_path: Path, x_max: int, y_max: int, DSR: int, resolution: int, overwrite=True):
+
+def padding(img, pad_x, pad_y):
+  w, h = img.shape
+  add_updown = int((pad_x - w) / 2)
+  add_leftright = int((pad_y - h) / 2)
+  padded_img = cv2.copyMakeBorder(img, add_updown + 1, add_updown + 1,\
+    add_leftright + 1, add_leftright + 1, cv2.BORDER_CONSTANT, value=1)
+
+  return padded_img[0:pad_x, 0:pad_y]
+
+
+def csv2img(input_file_path: Path, output_file_path: Path, x_max: int, y_max: int,\
+  DSR: int, resolution: int, pad_x: int, pad_y: int, overwrite=True):
 
   # convert csv into np.ndarray
   arr = csv2nparray(input_file_path, DSR, x_max, y_max)
+  arr_dpichanged = changedpi(arr, resolution)
   arr_trimed = trimming(arr)
+  arr_trimed_dpichanged = changedpi(arr_trimed, resolution)
+  arr_padded = padding(arr_trimed_dpichanged, pad_x, pad_y)
 
   # postprocessing
   arr *= 255
-  arr_trimed *= 255
+  arr_dpichanged *= 255
+  arr_padded *= 255
 
   ### make "row"
   # make folders on cwd
@@ -95,7 +115,7 @@ def csv2img(input_file_path: Path, output_file_path: Path, x_max: int, y_max: in
   if not down_sampleddata_folder.exists():
     down_sampleddata_folder.mkdir(exist_ok=True)
   if overwrite or not (down_sampleddata_folder / f'{output_file_path.stem}_dpichanged{output_file_path.suffix}').exists():
-    cv2.imwrite(f'./tmp_changed{output_file_path.suffix}', changedpi(arr, resolution).T)
+    cv2.imwrite(f'./tmp_changed{output_file_path.suffix}', arr_dpichanged.T)
     shutil.move(f'./tmp_changed{output_file_path.suffix}',\
       str(down_sampleddata_folder / f'{output_file_path.stem}_dpichanged{output_file_path.suffix}'))
 
@@ -104,14 +124,15 @@ def csv2img(input_file_path: Path, output_file_path: Path, x_max: int, y_max: in
   if not trimmeddata_folder.exists():
     trimmeddata_folder.mkdir(exist_ok=True)
   if overwrite or not (trimmeddata_folder / f'{output_file_path.stem}_trimmed{output_file_path.suffix}').exists():
-    cv2.imwrite(f'./tmp_trimmed{output_file_path.suffix}', changedpi(arr_trimed, resolution).T)
+    cv2.imwrite(f'./tmp_trimmed{output_file_path.suffix}', arr_padded.T)
     shutil.move(f'./tmp_trimmed{output_file_path.suffix}',\
       str(trimmeddata_folder / f'{output_file_path.stem}_trimmed{output_file_path.suffix}'))
 
 
 def main():
   # filepath
-  INPUT_FILE_PATH = Path(r'C:\Users\Taisei\development\01b_signdata_copy\宮原\サインテスト２\Csv\Sign-2016-宮原悠司-1-True-1.csv')
+  #INPUT_FILE_PATH = Path(r'C:\Users\Taisei\development\01b_signdata_copy\宮原\サインテスト２\Csv\Sign-2016-宮原悠司-1-True-1.csv')
+  INPUT_FILE_PATH = r'C:\Users\taise\Documents\大世のドキュメント\横浜国立大学\中田研\csv2img\坪井\サインテスト２\Csv\Sign-2022-坪井陽人-1-True-3.csv'
   OUTPUT_FILE_PATH = Path('./out.bmp')
   # flame size
   X_MAX = 13000
@@ -120,8 +141,12 @@ def main():
   DSR = 10
   # target dpi
   RESOLUTION = 640 ** 2
+  # target padding dpi
+  PADDED_X = 2000
+  PADDED_Y = 300
 
-  csv2img(INPUT_FILE_PATH, OUTPUT_FILE_PATH, X_MAX, Y_MAX, DSR, RESOLUTION)
+  csv2img(INPUT_FILE_PATH, OUTPUT_FILE_PATH, X_MAX, Y_MAX, DSR, RESOLUTION, PADDED_X, PADDED_Y)
+
 
 if __name__ == '__main__':
   main()
