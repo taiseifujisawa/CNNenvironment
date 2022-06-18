@@ -19,7 +19,7 @@ DSR = 10
 RESOLUTION = 640 ** 2
 # target padding dpi
 PADDED_X = 2000
-PADDED_Y = 300
+PADDED_Y = 500
 
 # get all subjects' directories
 dirs = [dir / RELATIVE_CSV_PATH for dir in cwd.iterdir() if dir.is_dir() \
