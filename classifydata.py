@@ -33,7 +33,17 @@ for dir in tqdm(dirs):
   for csv in tqdm([f for f in dir.iterdir() if f.is_file()]):
     filename = csv.name.split('-')
     subject_no = int(filename[1])
-    name_no = subject_number_dict[filename[2]]
+    try:
+      name_no = subject_number_dict[filename[2]]
+    except Exception as e:
+      msg = f'[ERROR] An error occurred with "{str(csv)}".{str(e)} does not exist in the dictionary.\n'
+      print(msg)
+      with open("errorlog.txt", 'a', encoding='utf-8') as f1,\
+        open("errorfile.txt", 'a', encoding='utf-8') as f2:
+        f1.write(msg)
+        f2.write(f'{str(csv)}\n')
+      continue
+
     authenticity = filename[3] if len(filename) == 5 else filename[4]
     assert authenticity in ['True', 'False'], "authenticity is neither 'True' nor 'False'"
 
