@@ -21,16 +21,19 @@ class MnistClassifier:
         tf.random.set_seed(RANDOM_SEED)
         np.random.seed(RANDOM_SEED)
         self.train_test_rate = 0.2
+        self.cwd = Path.cwd()
 
     def loaddataset(self, pickle=False):
-        """データセットをロード
+        """データの読み込み、成形
+
+        Args:
+            pickle (bool): pickleから読みだすか. Defaults to False.
         """
         if pickle:
             print('reading pickle...')
-            self.X_train, self.y_train, self.X_test, self.y_test = serialize_read(self.cwd / 'dataset.pkl')
+            self.X_train, self.X_test, self.y_train, self.y_test = serialize_read(self.cwd / 'dataset.pkl')
             print('finish!')
         else:
-            self.cwd = Path.cwd()
             self.truedir = self.cwd / 'true/resized'
             self.falsedir = self.cwd / 'false/resized'
             ds = []
@@ -62,17 +65,14 @@ class MnistClassifier:
 
             print('writing to pickle...')
             serialize_write(
-                (self.X_train, self.X_test, self.y_train, )
-                , self.cwd / 'dataset_X_train.pkl'
+                (self.X_train, self.X_test, self.y_train, self.y_test)
+                , self.cwd / 'dataset.pkl'
                 )
-            serialize_write(self.X_test, self.cwd / 'dataset_X_test.pkl')
-            serialize_write(self.y_train, self.cwd / 'dataset_y_train.pkl')
-            serialize_write(self.y_test, self.cwd / 'dataset_y_test.pkl')
             print('finish!')
-        print(f'train data : {len(train)}, test data : {len(test)}')
+        print(f'train data : {len(self.y_train)}, test data : {len(self.y_test)}')
 
     def cnnconfig(self):
-        """諸元の設定
+        """cnnの諸元の設定
         """
         self.model_name = 'my_model'
         self.model_savefile = 'my_model.h5'
@@ -155,7 +155,7 @@ class MnistClassifier:
             mnist: MnistClassifierオブジェクト
         """
         mnist = cls()
-        mnist.loaddataset(True)
+        mnist.loaddataset()
         mnist.cnnconfig()
         mnist.makecnnmodel()
         mnist.training()
@@ -175,7 +175,7 @@ class MnistClassifier:
             mnist: MnistClassifierオブジェクト
         """
         mnist = cls()
-        mnist.loaddataset()
+        mnist.loaddataset(True)
         mnist.cnnconfig()
         try:
             mnist.model = tf.keras.models.load_model(mnist.model_savefile)
