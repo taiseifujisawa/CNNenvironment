@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 RESOLUTION = 1000 * 250
 
-cwd = Path.cwd()
+cwd = Path.cwd() / '../01b_signdata_copy_all'
 true = cwd / 'true/trimmed'
 false = cwd / 'false/trimmed'
 true_new = cwd / 'true/resized'
