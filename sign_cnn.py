@@ -77,13 +77,13 @@ class MnistClassifier:
         self.model_name = 'my_model'
         self.model_savefile = 'my_model.h5'
         self.last_layername = "last_conv"
-        self.input_shape = (28, 28)
-        self.outputs = 10
+        self.input_shape = (250, 1000)
+        self.outputs = 1
         self.optimizer = 'Adam'
-        self.lossfunc = 'sparse_categorical_crossentropy'
+        self.lossfunc = 'binary_crossentropy'
         self.epochs = 10
-        self.validation_rate = 0.2
-        self.batchsize = 128
+        self.validation_rate = 0
+        self.batchsize = 16
         self.train_size = self.y_train.shape[0]
         self.test_size = self.y_test.shape[0]
         self.predict = None
@@ -94,15 +94,15 @@ class MnistClassifier:
         """
         self.model = tf.keras.Sequential([
             tf.keras.layers.Reshape(self.input_shape + (1,), input_shape=self.input_shape),
-            tf.keras.layers.Conv2D(16, (3, 3), activation='relu'\
-                , input_shape=(28, 28)),
-            tf.keras.layers.Conv2D(16, (3, 3), activation='relu', name=self.last_layername),
+            tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-            tf.keras.layers.Dropout(0.25),
+            tf.keras.layers.Conv2D(64, (3, 3), activation='relu', name=self.last_layername),
+            tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+            #tf.keras.layers.Dropout(0.5),
             tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(32, activation='relu'),
-            tf.keras.layers.Dropout(0.5),
-            tf.keras.layers.Dense(self.outputs, activation='softmax')
+            #tf.keras.layers.Dense(32, activation='relu'),
+            #tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(self.outputs, activation='sigmoid')
         ], name=self.model_name)
         self.model.summary()
         self.model.compile(optimizer=self.optimizer, loss=self.lossfunc, metrics=['accuracy'])
@@ -155,7 +155,7 @@ class MnistClassifier:
             mnist: MnistClassifierオブジェクト
         """
         mnist = cls()
-        mnist.loaddataset()
+        mnist.loaddataset(True)
         mnist.cnnconfig()
         mnist.makecnnmodel()
         mnist.training()
@@ -234,10 +234,10 @@ def serialize_read(filepath: Path):
 
 def main():
     # ディープラーニング実行
-    #mnist = MnistClassifier.deeplearning()
+    mnist = MnistClassifier.deeplearning()
 
     # 保存済みモデル再構築
-    mnist = MnistClassifier.reconstructmodel()
+    #mnist = MnistClassifier.reconstructmodel()
 
     # 0 - 9, failureのディレクトリ作成
     cwd = Path.cwd()
