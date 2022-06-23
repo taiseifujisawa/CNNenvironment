@@ -88,10 +88,10 @@ class MnistClassifier:
         self.input_shape = (250, 1000)
         self.outputs = 32
         self.optimizer = 'Adam'
-        self.lossfunc = 'categorical_crossentropy'
+        self.lossfunc = 'sparse_categorical_crossentropy'
         self.epochs = 50
         self.validation_rate = 0
-        self.batchsize = 16
+        self.batchsize = 4
         self.train_size = self.y_train.shape[0]
         self.test_size = self.y_test.shape[0]
         self.predict = None
