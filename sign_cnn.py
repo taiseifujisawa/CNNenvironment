@@ -1,3 +1,4 @@
+import imp
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -8,6 +9,7 @@ import pickle
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from dataclasses import dataclass
+from subject_number import subject_number_dict
 
 @dataclass
 class DataSet:
@@ -20,8 +22,10 @@ class MnistClassifier:
         RANDOM_SEED = 0
         tf.random.set_seed(RANDOM_SEED)
         np.random.seed(RANDOM_SEED)
-        self.train_test_rate = 0.2
+        self.train_test_rate = 0.05
         self.cwd = Path.cwd()
+        self.truedir = self.cwd / 'dataset/true'
+        self.falsedir = self.cwd / 'dataset/false'
 
     def loaddataset(self, pickle=False):
         """データの読み込み、成形
@@ -34,25 +38,29 @@ class MnistClassifier:
             self.X_train, self.X_test, self.y_train, self.y_test = serialize_read(self.cwd / 'dataset.pkl')
             print('finish!')
         else:
-            self.truedir = self.cwd / 'true/resized'
-            self.falsedir = self.cwd / 'false/resized'
             ds = []
+
+            # trueのラベリングは0からlen(subject_number_dict)-1まで
+            # sortedのkeyには関数を入れる
             print('loading true dataset...')
-            for i, bmp in enumerate(tqdm(self.truedir.glob('*.bmp'))):
-                ds.append(
-                    DataSet(i,
-                    cv2.cvtColor(cv2.imread(str(bmp)), cv2.COLOR_BGR2GRAY),
-                    1)
-                )
+            for subject, dir in enumerate(tqdm(sorted(self.truedir.iterdir(), key=lambda x: int(x.name)))):
+                for i, bmp in enumerate(dir.glob('*.bmp')):
+                    ds.append(
+                        DataSet(i,
+                        cv2.cvtColor(cv2.imread(str(bmp)), cv2.COLOR_BGR2GRAY),
+                        subject)
+                    )
             print('finish!')
 
+            # falseのラベリングはlen(subject_number_dict)から2len(subject_number_dict)-1まで
             print('loading false dataset...')
-            for i, bmp in enumerate(tqdm(self.falsedir.glob('*.bmp'))):
-                ds.append(
-                    DataSet(i,
-                    cv2.cvtColor(cv2.imread(str(bmp)), cv2.COLOR_BGR2GRAY),
-                    0)
-                )
+            for subject, dir in enumerate(tqdm(sorted(self.falsedir.iterdir(), key=lambda x: int(x.name)))):
+                for i, bmp in enumerate(dir.glob('*.bmp')):
+                    ds.append(
+                        DataSet(i,
+                        cv2.cvtColor(cv2.imread(str(bmp)), cv2.COLOR_BGR2GRAY),
+                        subject + len(subject_number_dict))
+                    )
             print('finish!')
 
             print('splitting them...')
@@ -78,10 +86,10 @@ class MnistClassifier:
         self.model_savefile = 'my_model.h5'
         self.last_layername = "last_conv"
         self.input_shape = (250, 1000)
-        self.outputs = 1
+        self.outputs = 32
         self.optimizer = 'Adam'
-        self.lossfunc = 'binary_crossentropy'
-        self.epochs = 10
+        self.lossfunc = 'categorical_crossentropy'
+        self.epochs = 50
         self.validation_rate = 0
         self.batchsize = 16
         self.train_size = self.y_train.shape[0]
@@ -98,11 +106,11 @@ class MnistClassifier:
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
             tf.keras.layers.Conv2D(64, (3, 3), activation='relu', name=self.last_layername),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-            #tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dropout(0.5),
             tf.keras.layers.Flatten(),
-            #tf.keras.layers.Dense(32, activation='relu'),
-            #tf.keras.layers.Dropout(0.5),
-            tf.keras.layers.Dense(self.outputs, activation='sigmoid')
+            tf.keras.layers.Dense(32, activation='relu'),
+            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(self.outputs, activation='softmax')
         ], name=self.model_name)
         self.model.summary()
         self.model.compile(optimizer=self.optimizer, loss=self.lossfunc, metrics=['accuracy'])
