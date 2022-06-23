@@ -24,7 +24,7 @@ PADDED_Y = 500
 # get all subjects' directories
 dirs = [dir / RELATIVE_CSV_PATH for dir in cwd.iterdir() if dir.is_dir() \
   and dir not in [TRUE_FOLDER, FALSE_FOLDER, cwd / '__pycache__', cwd / '.git',\
-    cwd / 'row', cwd / 'down_sampled', cwd / 'trimmed', cwd / 'cam']]
+    cwd / 'row', cwd / 'down_sampled', cwd / 'trimmed', cwd / 'cam', cwd / 'dataset']]
 
 # count 0 to 7
 i = 0
