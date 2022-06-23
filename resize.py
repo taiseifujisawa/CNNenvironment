@@ -2,6 +2,7 @@
 # cwdにdatasetディレクトリを作り、その中にtrue, falseディレクトリを作り、
 # さらにその下に被験者のディレクトリを作り、名前を整理して保存
 # subject_number_dictが参加被験者のみ(藤澤、洞口消去)になっている必要あり
+# classifydataの後に使う
 
 from pathlib import Path
 import cv2

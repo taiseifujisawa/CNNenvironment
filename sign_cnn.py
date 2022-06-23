@@ -17,7 +17,7 @@ class DataSet:
     arr: np.ndarray
     target: int
 
-class MnistClassifier:
+class SignClassifier:
     def __init__(self):
         RANDOM_SEED = 0
         tf.random.set_seed(RANDOM_SEED)
@@ -91,7 +91,7 @@ class MnistClassifier:
         self.lossfunc = 'sparse_categorical_crossentropy'
         self.epochs = 50
         self.validation_rate = 0
-        self.batchsize = 4
+        self.batchsize = 8
         self.train_size = self.y_train.shape[0]
         self.test_size = self.y_test.shape[0]
         self.predict = None
@@ -160,17 +160,17 @@ class MnistClassifier:
         """ディープラーニングを実行
 
         Returns:
-            mnist: MnistClassifierオブジェクト
+            sign: SignClassifierオブジェクト
         """
-        mnist = cls()
-        mnist.loaddataset(True)
-        mnist.cnnconfig()
-        mnist.makecnnmodel()
-        mnist.training()
-        mnist.drawlossgraph()
-        mnist.testevaluate()
-        mnist.prediction()
-        return mnist
+        sign = cls()
+        sign.loaddataset(True)
+        sign.cnnconfig()
+        sign.makecnnmodel()
+        sign.training()
+        sign.drawlossgraph()
+        sign.testevaluate()
+        sign.prediction()
+        return sign
 
     @classmethod
     def reconstructmodel(cls):
@@ -180,21 +180,21 @@ class MnistClassifier:
             e: 指定した名前の保存済みモデルがない場合
 
         Returns:
-            mnist: MnistClassifierオブジェクト
+            sign: SignClassifierオブジェクト
         """
-        mnist = cls()
-        mnist.loaddataset(True)
-        mnist.cnnconfig()
+        sign = cls()
+        sign.loaddataset(True)
+        sign.cnnconfig()
         try:
-            mnist.model = tf.keras.models.load_model(mnist.model_savefile)
+            sign.model = tf.keras.models.load_model(sign.model_savefile)
         except OSError as e:
             print("No model exists")
             raise e
         else:
-            mnist.model.summary()
-            mnist.testevaluate()
-            mnist.prediction()
-        return mnist
+            sign.model.summary()
+            sign.testevaluate()
+            sign.prediction()
+        return sign
 
     def array2img(self, test_no: int, save_dir: Path, extension='png', target_dpi=None, inverse=False, overwrite=True):
         """テストデータを画像ファイルとして保存
@@ -242,10 +242,10 @@ def serialize_read(filepath: Path):
 
 def main():
     # ディープラーニング実行
-    mnist = MnistClassifier.deeplearning()
+    sign = SignClassifier.deeplearning()
 
     # 保存済みモデル再構築
-    #mnist = MnistClassifier.reconstructmodel()
+    #sign = SignClassifier.reconstructmodel()
 
     # 0 - 9, failureのディレクトリ作成
     cwd = Path.cwd()
@@ -256,15 +256,15 @@ def main():
     # 間違えたテストデータをpng, csvに出力
     with open('failure.csv', 'w', encoding='utf-8') as f:
         f.write('index,prediction,answer\n')
-        for i in mnist.index_failure:
+        for i in sign.index_failure:
             Path(f'failure/{i}').mkdir(exist_ok=True)
-            mnist.array2img(i, Path(f'failure/{i}'))
-            f.write(f'{i},{mnist.predict[i]},{mnist.y_test[i]}\n')
+            sign.array2img(i, Path(f'failure/{i}'))
+            f.write(f'{i},{sign.predict[i]},{sign.y_test[i]}\n')
 
     # 全テストデータをpngに出力
-    for i, y_test in enumerate(tqdm(mnist.y_test)):
+    for i, y_test in enumerate(tqdm(sign.y_test)):
         Path(f'{y_test}/{i}').mkdir(exist_ok=True)
-        mnist.array2img(i, Path(f'{y_test}/{i}'))
+        sign.array2img(i, Path(f'{y_test}/{i}'))
 
 if __name__ == '__main__':
     main()
