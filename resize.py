@@ -1,3 +1,5 @@
+# cwdにあるtrue, falseディレクトリに対して、新たにそれぞれresizedディレクトリを作り、名前をごっちゃにして保存
+
 from pathlib import Path
 import cv2
 from tqdm import tqdm
