@@ -37,7 +37,7 @@ class SignClassifier:
         self.lossfunc = 'sparse_categorical_crossentropy'
         self.epochs = 1
         self.batchsize = 8
-        self.loadfrompickle = False         # テストデータ数を変えるときはFalseにしてdatasetから読み込みなおす
+        self.loadfrompickle = True         # テストデータ数を変えるときはFalseにしてdatasetから読み込みなおす
 
     def loaddataset(self):
         """データの読み込み、成形
@@ -45,17 +45,16 @@ class SignClassifier:
         Args:
             pickle (bool): pickleから読みだすか. Defaults to False.
         """
+        print('\n====================\n\nloaddataset\n\n====================\n')
         if self.loadfrompickle:
-            print('reading pickle...')
             self.X_train, self.X_test, self.y_train, self.y_test = serialize_read(self.cwd / 'dataset.pkl')
             self.train_test_rate = len(self.y_test) / (len(self.y_train) + len(self.y_test))
-            print('finish!')
         else:
             ds = []
 
             # trueのラベリングは0から(被験者数)-1まで
             # sortedのkeyには関数を入れる
-            print('loading true dataset...')
+            print('\n####################\n\nloading true dataset...\n')
             for subject, dir in enumerate(tqdm(sorted(self.truedir.iterdir(), key=lambda x: int(x.name)))):
                 for i, bmp in enumerate(dir.glob('*.bmp')):
                     ds.append(
@@ -63,10 +62,10 @@ class SignClassifier:
                         cv2.cvtColor(cv2.imread(str(bmp)), cv2.COLOR_BGR2GRAY),
                         subject)
                     )
-            print('finish!')
+            print('\nfinish!\n\n####################\n')
 
             # falseのラベリングは(被験者数)から2(被験者数)-1まで
-            print('loading false dataset...')
+            print('\n####################\n\nloading false dataset...\n')
             for subject, dir in enumerate(tqdm(sorted(self.falsedir.iterdir(), key=lambda x: int(x.name)))):
                 for i, bmp in enumerate(dir.glob('*.bmp')):
                     ds.append(
@@ -76,37 +75,36 @@ class SignClassifier:
                         subject + len(list(self.truedir.iterdir()))
                         )
                     )
-            print('finish!')
+            print('\nfinish!\n\n####################\n')
 
-            print('splitting them...')
+            print('\n####################\n\nsplitting them...\n')
             try:
                 train, test = train_test_split(ds, test_size=self.train_test_rate)
             except ValueError:
                 train = ds
                 self.X_test = np.array([])
                 self.y_test = np.array([])
-                print('The exception below is ignored')
+                print('The exception below was ignored')
                 print(traceback.format_exc())
-                print('no test data')
+                print('No test data exists')
             else:
                 self.X_test = np.array([t.arr for t in test]) / 255
                 self.y_test = np.array([t.target for t in test])
             finally:
                 self.X_train = np.array([t.arr for t in train]) / 255
                 self.y_train = np.array([t.target for t in train])
-                print('finish!')
+            print('\nfinish!\n\n####################\n')
 
-            print('writing to pickle...')
             serialize_write(
                 (self.X_train, self.X_test, self.y_train, self.y_test)
                 , self.cwd / 'dataset.pkl'
                 )
-            print('finish!')
-        print(f'train data : {len(self.y_train)}, test data : {len(self.y_test)}')
+        print(f'# of train data : {len(self.y_train)}, # of test data : {len(self.y_test)}')
 
     def makecnnmodel(self):
         """モデルの作成(Sequential API)
         """
+        print('\n====================\n\nmakecnnmodel\n\n====================\n')
         self.model = tf.keras.Sequential([
             tf.keras.layers.Reshape(self.input_shape + (1,), input_shape=self.input_shape),
             tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
@@ -125,6 +123,7 @@ class SignClassifier:
     def training(self):
         """訓練
         """
+        print('\n====================\n\ntraining\n\n====================\n')
         self.history = self.model.fit(self.X_train, self.y_train,\
             batch_size=self.batchsize, epochs=self.epochs, validation_split=self.validation_rate)
         self.model.save(self.model_savefile)
@@ -132,6 +131,7 @@ class SignClassifier:
     def drawlossgraph(self):
         """損失関数の描画
         """
+        print('\n====================\n\ndrawlossgraph\n\n====================\n')
         loss     = self.history.history['loss']
         nb_epoch = len(loss)
         fig = plt.figure()
@@ -139,11 +139,20 @@ class SignClassifier:
         try:
             val_loss = self.history.history['val_loss']
         except KeyError:
-            print('The exception below is ignored')
+            print('The exception below was ignored')
             print(traceback.format_exc())
-            print('no validation data')
+            print('No validation data exists')
+            with open('trainlog.csv', 'w') as f:
+                f.write('epoch,loss,acc\n')
+                for ep, (ls, ac) in enumerate(zip(loss, self.history.history['accuracy'])):
+                    f.write(f'{ep},{ls},{ac}\n')
         else:
             plt.plot(range(nb_epoch), val_loss, marker='.', label='val_loss')
+            with open('trainlog.csv', 'w') as f:
+                f.write('epoch,loss,acc,val_loss,val_acc\n')
+                for ep, (ls, ac, vls, vac) in enumerate(zip(loss, self.history.history['accuracy'],
+                    val_loss, self.history.history['val_accuracy'])):
+                    f.write(f'{ep},{ls},{ac},{vls},{vac}\n')
         finally:
             plt.legend(loc='best', fontsize=10)
             plt.grid()
@@ -155,6 +164,7 @@ class SignClassifier:
     def testevaluate(self):
         """テストデータによる評価
         """
+        print('\n====================\n\ntestevaluate\n\n====================\n')
         test_loss, test_acc = self.model.evaluate(self.X_test, self.y_test, verbose=0)
         print('Test loss:', test_loss)
         print('Test accuracy:', test_acc)
@@ -162,6 +172,7 @@ class SignClassifier:
     def prediction(self):
         """全テストデータで予測、予測結果と間違えたテストデータのインデックスpickle化して保存
         """
+        print('\n====================\n\nprediction\n\n====================\n')
         predictions = self.model.predict(self.X_test)
         predictions = [np.argmax(pred) for pred in predictions]
         index_failure = [i for i, (p, t) in enumerate(zip(predictions, self.y_test)) if p != t]
@@ -176,6 +187,7 @@ class SignClassifier:
         Returns:
             sign: SignClassifierオブジェクト
         """
+        print('\n********************\n\ndeeplearning\n\n********************\n')
         sign = cls()
         sign.loaddataset()
         sign.makecnnmodel()
@@ -198,6 +210,7 @@ class SignClassifier:
         Returns:
             sign: SignClassifierオブジェクト
         """
+        print('\n********************\n\nreconstructmodel\n\n********************\n')
         sign = cls()
         sign.loaddataset()
         try:
@@ -208,25 +221,30 @@ class SignClassifier:
         else:
             sign.model.summary()
             if len(sign.y_test) == 0:
-                print('no test data')
+                print('No test data exists')
             else:
                 sign.testevaluate()
                 sign.prediction()
         return sign
 
-    def array2img(self, test_no: int, save_dir: Path, extension='png', target_dpi=None, inverse=False, overwrite=True):
-        """テストデータを画像ファイルとして保存
+    def array2img(self, test_no: int, save_path: Path, extension='png', target_dpi=None, inverse=False, overwrite=True):
+        """テストデータを画像ファイルとして保存,
+        save_pathがdirなら'{test_no}.{extension}'という名前でそのdirに保存
+        save_dirがfileなら'{savedir}.{extension}'という名前でそのパスに保存(呼び出し側で拡張子をつけると2重になるので注意)
 
         Args:
             test_no (int): テストデータの何番目か
-            save_dir (Path): 保存先ディレクトリ
+            save_dir (Path): 保存先ディレクトリorパス
             extension (str, optional): ファイル拡張子. Defaults to 'png'.
             target_dpi (np.ndarray, optional): リサイズするdpi. Defaults to None.
             inverse (bool, optional): 白黒反転. Defaults to False.
             overwrite (bool, optional): 同名ファイルに上書きするか. Defaults to True.
         """
-        output_filename = f'{test_no}.{extension}'
-        output_filepath = Path.cwd() / save_dir / output_filename
+        if save_path.is_dir():
+            output_filename = f'{test_no}.{extension}'
+            output_filepath = Path.cwd() / save_path / output_filename
+        else:
+            output_filepath = Path(f'{save_path}.{extension}')
         dpi = (self.input_shape[1], self.input_shape[0])            # numpyは(row, column)　opencvは(x, y)で逆
         target_dpi = dpi if target_dpi == None else target_dpi
         if overwrite or not output_filepath.exists():
@@ -243,8 +261,10 @@ def serialize_write(obj, filepath: Path):
         obj (Any): pickle化するオブジェクト
         filepath (Path): 保存するパス
     """
+    print('\n####################\n\nwriting to pickle...\n')
     with open(filepath, 'wb') as f:
         pickle.dump(obj, f, protocol=4)
+    print('\nfinish!\n\n####################\n')
 
 def serialize_read(filepath: Path):
     """非pickle化
@@ -255,16 +275,19 @@ def serialize_read(filepath: Path):
     Returns:
         Any: 非pickle化されたオブジェクト
     """
+    print('\n####################\n\nreading from pickle...\n')
     with open(filepath, 'rb') as f:
-        return pickle.load(f)
+        pic = pickle.load(f)
+    print('\nfinish!\n\n####################\n')
+    return pic
 
 
 def main():
     # ディープラーニング実行
-    sign = SignClassifier.deeplearning()
+    #sign = SignClassifier.deeplearning()
 
     # 保存済みモデル再構築
-    #sign = SignClassifier.reconstructmodel()
+    sign = SignClassifier.reconstructmodel()
 
     if len(sign.y_test) == 0:
         pass
@@ -280,14 +303,13 @@ def main():
         with open('failure.csv', 'w', encoding='utf-8') as f:
             f.write('index,prediction,answer\n')
             for i in sign.index_failure:
-                Path(result_dir / f'failure/{i}').mkdir(exist_ok=True)
-                sign.array2img(i, result_dir / f'failure/{i}')
+                sign.array2img(i, result_dir / f'failure/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}')
                 f.write(f'{i},{sign.predict[i]},{sign.y_test[i]}\n')
 
         # 全テストデータをpngに出力
         for i, y_test in enumerate(tqdm(sign.y_test)):
             Path(result_dir / f'{y_test}/{i}').mkdir(exist_ok=True)
-            sign.array2img(i, result_dir / f'{y_test}/{i}')
+            sign.array2img(i, result_dir / f'{y_test}/{i}/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}')
 
 if __name__ == '__main__':
     main()
