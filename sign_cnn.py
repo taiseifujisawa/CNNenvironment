@@ -197,13 +197,11 @@ class SignClassifier:
         """
         print('\n********************\n\ndeeplearning\n\n********************\n')
         sign = cls()
+        assert sign.train_test_rate != 1, 'No train data exists. It is no use you having NN learn.'
         sign.loaddataset()
-        if len(sign.y_train) == 0:
-            print('No train data exists')
-        else:
-            sign.makecnnmodel()
-            sign.training()
-            sign.drawlossgraph()
+        sign.makecnnmodel()
+        sign.training()
+        sign.drawlossgraph()
         if len(sign.y_test) == 0:
             print('No test data exists')
         else:
