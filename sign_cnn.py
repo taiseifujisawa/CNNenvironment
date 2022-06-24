@@ -36,14 +36,15 @@ class SignClassifier:
         self.lossfunc = 'sparse_categorical_crossentropy'
         self.epochs = 1
         self.batchsize = 8
+        self.loadfrompickle = True
 
-    def loaddataset(self, pickle=False):
+    def loaddataset(self):
         """データの読み込み、成形
 
         Args:
             pickle (bool): pickleから読みだすか. Defaults to False.
         """
-        if pickle:
+        if self.loadfrompickle:
             print('reading pickle...')
             self.X_train, self.X_test, self.y_train, self.y_test = serialize_read(self.cwd / 'dataset.pkl')
             print('finish!')
@@ -195,13 +196,13 @@ class SignClassifier:
             test_no (int): テストデータの何番目か
             save_dir (Path): 保存先ディレクトリ
             extension (str, optional): ファイル拡張子. Defaults to 'png'.
-            target_dpi (_type_, optional): リサイズするdpi. Defaults to None.
+            target_dpi (np.ndarray, optional): リサイズするdpi. Defaults to None.
             inverse (bool, optional): 白黒反転. Defaults to False.
             overwrite (bool, optional): 同名ファイルに上書きするか. Defaults to True.
         """
         output_filename = f'{test_no}.{extension}'
         output_filepath = Path.cwd() / save_dir / output_filename
-        dpi = (self.input_shape[1], self.input_shape[0])
+        dpi = (self.input_shape[1], self.input_shape[0])            # numpyは(row, column)　opencvは(x, y)で逆
         target_dpi = dpi if target_dpi == None else target_dpi
         if overwrite or not output_filepath.exists():
             arr = 1 - self.X_test[test_no] if inverse else self.X_test[test_no]
@@ -235,7 +236,7 @@ def serialize_read(filepath: Path):
 
 def main():
     # ディープラーニング実行
-    sign = SignClassifier.deeplearning()
+    #sign = SignClassifier.deeplearning()
 
     # 保存済みモデル再構築
     sign = SignClassifier.reconstructmodel()
