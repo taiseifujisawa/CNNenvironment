@@ -1,4 +1,3 @@
-import imp
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -9,7 +8,6 @@ import pickle
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from dataclasses import dataclass
-from subject_number import subject_number_dict
 
 @dataclass
 class DataSet:
@@ -19,13 +17,25 @@ class DataSet:
 
 class SignClassifier:
     def __init__(self):
+        """cnnの諸元の設定
+        """
         RANDOM_SEED = 0
         tf.random.set_seed(RANDOM_SEED)
         np.random.seed(RANDOM_SEED)
-        self.train_test_rate = 0.05
         self.cwd = Path.cwd()
         self.truedir = self.cwd / 'dataset/true'
         self.falsedir = self.cwd / 'dataset/false'
+        self.model_name = 'my_model'
+        self.model_savefile = 'my_model.h5'
+        self.last_layername = "last_conv"
+        self.train_test_rate = 0.05
+        self.validation_rate = 0.05
+        self.input_shape = (250, 1000)
+        self.outputs = 32
+        self.optimizer = 'Adam'
+        self.lossfunc = 'sparse_categorical_crossentropy'
+        self.epochs = 1
+        self.batchsize = 8
 
     def loaddataset(self, pickle=False):
         """データの読み込み、成形
@@ -40,7 +50,7 @@ class SignClassifier:
         else:
             ds = []
 
-            # trueのラベリングは0からlen(subject_number_dict)-1まで
+            # trueのラベリングは0から(被験者数)-1まで
             # sortedのkeyには関数を入れる
             print('loading true dataset...')
             for subject, dir in enumerate(tqdm(sorted(self.truedir.iterdir(), key=lambda x: int(x.name)))):
@@ -52,14 +62,16 @@ class SignClassifier:
                     )
             print('finish!')
 
-            # falseのラベリングはlen(subject_number_dict)から2len(subject_number_dict)-1まで
+            # falseのラベリングは(被験者数)から2(被験者数)-1まで
             print('loading false dataset...')
             for subject, dir in enumerate(tqdm(sorted(self.falsedir.iterdir(), key=lambda x: int(x.name)))):
                 for i, bmp in enumerate(dir.glob('*.bmp')):
                     ds.append(
-                        DataSet(i,
+                        DataSet(
+                        i,
                         cv2.cvtColor(cv2.imread(str(bmp)), cv2.COLOR_BGR2GRAY),
-                        subject + len(subject_number_dict))
+                        subject + len(list(self.truedir.iterdir()))
+                        )
                     )
             print('finish!')
 
@@ -78,24 +90,6 @@ class SignClassifier:
                 )
             print('finish!')
         print(f'train data : {len(self.y_train)}, test data : {len(self.y_test)}')
-
-    def cnnconfig(self):
-        """cnnの諸元の設定
-        """
-        self.model_name = 'my_model'
-        self.model_savefile = 'my_model.h5'
-        self.last_layername = "last_conv"
-        self.input_shape = (250, 1000)
-        self.outputs = 32
-        self.optimizer = 'Adam'
-        self.lossfunc = 'sparse_categorical_crossentropy'
-        self.epochs = 50
-        self.validation_rate = 0
-        self.batchsize = 8
-        self.train_size = self.y_train.shape[0]
-        self.test_size = self.y_test.shape[0]
-        self.predict = None
-        self.index_failure = None
 
     def makecnnmodel(self):
         """モデルの作成(Sequential API)
@@ -163,8 +157,7 @@ class SignClassifier:
             sign: SignClassifierオブジェクト
         """
         sign = cls()
-        sign.loaddataset(True)
-        sign.cnnconfig()
+        sign.loaddataset()
         sign.makecnnmodel()
         sign.training()
         sign.drawlossgraph()
@@ -183,8 +176,7 @@ class SignClassifier:
             sign: SignClassifierオブジェクト
         """
         sign = cls()
-        sign.loaddataset(True)
-        sign.cnnconfig()
+        sign.loaddataset()
         try:
             sign.model = tf.keras.models.load_model(sign.model_savefile)
         except OSError as e:
@@ -209,7 +201,8 @@ class SignClassifier:
         """
         output_filename = f'{test_no}.{extension}'
         output_filepath = Path.cwd() / save_dir / output_filename
-        target_dpi = self.input_shape if target_dpi == None else target_dpi
+        dpi = (self.input_shape[1], self.input_shape[0])
+        target_dpi = dpi if target_dpi == None else target_dpi
         if overwrite or not output_filepath.exists():
             arr = 1 - self.X_test[test_no] if inverse else self.X_test[test_no]
             resized_img = cv2.resize(arr, target_dpi) * 255
@@ -228,7 +221,7 @@ def serialize_write(obj, filepath: Path):
         pickle.dump(obj, f, protocol=4)
 
 def serialize_read(filepath: Path):
-    """_summary_
+    """非pickle化
 
     Args:
         filepath (Path): 読みだすpickleファイル
@@ -245,12 +238,12 @@ def main():
     sign = SignClassifier.deeplearning()
 
     # 保存済みモデル再構築
-    #sign = SignClassifier.reconstructmodel()
+    sign = SignClassifier.reconstructmodel()
 
     # 0 - 9, failureのディレクトリ作成
     cwd = Path.cwd()
     (cwd / 'failure').mkdir(exist_ok=True)
-    for i in range(10):
+    for i in range(sign.outputs):
         (cwd / f'{i}').mkdir(exist_ok=True)
 
     # 間違えたテストデータをpng, csvに出力
