@@ -29,15 +29,15 @@ class SignClassifier:
         self.model_name = 'my_model'
         self.model_savefile = 'my_model.h5'
         self.last_layername = "last_conv"
-        self.train_test_rate = 0
-        self.validation_rate = 0
+        self.train_test_rate = 0.2          # self.loadfrompickle = Falseなら保存済みのpicklefileのtestdataの割合に書き変わる
+        self.validation_rate = 0.2          # self.loadfrompickleによらず一定
         self.input_shape = (250, 1000)      # numpy, (row, column)
         self.outputs = 32
         self.optimizer = 'Adam'
         self.lossfunc = 'sparse_categorical_crossentropy'
         self.epochs = 1
         self.batchsize = 8
-        self.loadfrompickle = False
+        self.loadfrompickle = False         # テストデータ数を変えるときはFalseにしてdatasetから読み込みなおす
 
     def loaddataset(self):
         """データの読み込み、成形
@@ -48,7 +48,7 @@ class SignClassifier:
         if self.loadfrompickle:
             print('reading pickle...')
             self.X_train, self.X_test, self.y_train, self.y_test = serialize_read(self.cwd / 'dataset.pkl')
-            self.train_test_rate = len(self.y_test) / (len(self.X_test) + len(self.y_test))
+            self.train_test_rate = len(self.y_test) / (len(self.y_train) + len(self.y_test))
             print('finish!')
         else:
             ds = []
@@ -266,25 +266,28 @@ def main():
     # 保存済みモデル再構築
     #sign = SignClassifier.reconstructmodel()
 
-    # failureとクラスごとのディレクトリ作成
-    result_dir = Path.cwd() / 'test_results'
-    result_dir.mkdir(exist_ok=True)
-    (result_dir / 'failure').mkdir(exist_ok=True)
-    for i in range(sign.outputs):
-        (result_dir / f'{i}').mkdir(exist_ok=True)
+    if len(sign.y_test) == 0:
+        pass
+    else:
+        # failureとクラスごとのディレクトリ作成
+        result_dir = Path.cwd() / 'test_results'
+        result_dir.mkdir(exist_ok=True)
+        (result_dir / 'failure').mkdir(exist_ok=True)
+        for i in range(sign.outputs):
+            (result_dir / f'{i}').mkdir(exist_ok=True)
 
-    # 間違えたテストデータをpng, csvに出力
-    with open('failure.csv', 'w', encoding='utf-8') as f:
-        f.write('index,prediction,answer\n')
-        for i in sign.index_failure:
-            Path(result_dir / f'failure/{i}').mkdir(exist_ok=True)
-            sign.array2img(i, result_dir / f'failure/{i}')
-            f.write(f'{i},{sign.predict[i]},{sign.y_test[i]}\n')
+        # 間違えたテストデータをpng, csvに出力
+        with open('failure.csv', 'w', encoding='utf-8') as f:
+            f.write('index,prediction,answer\n')
+            for i in sign.index_failure:
+                Path(result_dir / f'failure/{i}').mkdir(exist_ok=True)
+                sign.array2img(i, result_dir / f'failure/{i}')
+                f.write(f'{i},{sign.predict[i]},{sign.y_test[i]}\n')
 
-    # 全テストデータをpngに出力
-    for i, y_test in enumerate(tqdm(sign.y_test)):
-        Path(result_dir / f'{y_test}/{i}').mkdir(exist_ok=True)
-        sign.array2img(i, result_dir / f'{y_test}/{i}')
+        # 全テストデータをpngに出力
+        for i, y_test in enumerate(tqdm(sign.y_test)):
+            Path(result_dir / f'{y_test}/{i}').mkdir(exist_ok=True)
+            sign.array2img(i, result_dir / f'{y_test}/{i}')
 
 if __name__ == '__main__':
     main()
