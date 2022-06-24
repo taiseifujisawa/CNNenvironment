@@ -22,7 +22,7 @@ class SignClassifier:
         RANDOM_SEED = 0
         tf.random.set_seed(RANDOM_SEED)
         np.random.seed(RANDOM_SEED)
-        self.train_test_rate = 0.05
+        self.train_test_rate = 0
         self.cwd = Path.cwd()
         self.truedir = self.cwd / 'dataset/true'
         self.falsedir = self.cwd / 'dataset/false'
