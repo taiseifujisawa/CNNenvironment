@@ -29,15 +29,15 @@ class SignClassifier:
         self.model_name = 'my_model'
         self.model_savefile = 'my_model.h5'
         self.last_layername = "last_conv"
-        self.train_test_rate = 0.2          # self.loadfrompickle = Falseなら保存済みのpicklefileのtestdataの割合に書き変わる
-        self.validation_rate = 0.2          # self.loadfrompickleによらず一定
+        self.train_test_rate = 1          # self.loadfrompickle = Falseなら保存済みのpicklefileのtestdataの割合に書き変わる
+        self.validation_rate = 0          # self.loadfrompickleによらず一定
         self.input_shape = (250, 1000)      # numpy, (row, column)
         self.outputs = 32
         self.optimizer = 'Adam'
         self.lossfunc = 'sparse_categorical_crossentropy'
         self.epochs = 1
         self.batchsize = 8
-        self.loadfrompickle = True         # テストデータ数を変えるときはFalseにしてdatasetから読み込みなおす
+        self.loadfrompickle = False         # テストデータ数を変えるときはFalseにしてdatasetから読み込みなおす
 
     def loaddataset(self):
         """データの読み込み、成形
@@ -78,21 +78,29 @@ class SignClassifier:
             print('\nfinish!\n\n####################\n')
 
             print('\n####################\n\nsplitting them...\n')
-            try:
-                train, test = train_test_split(ds, test_size=self.train_test_rate)
-            except ValueError:
-                train = ds
-                self.X_test = np.array([])
-                self.y_test = np.array([])
-                print('The exception below was ignored')
-                print(traceback.format_exc())
-                print('No test data exists')
-            else:
+            if self.train_test_rate == 1:
+                test = ds
+                self.X_train = np.array([])
+                self.y_train = np.array([])
                 self.X_test = np.array([t.arr for t in test]) / 255
                 self.y_test = np.array([t.target for t in test])
-            finally:
-                self.X_train = np.array([t.arr for t in train]) / 255
-                self.y_train = np.array([t.target for t in train])
+                print('No train data exists')
+            else:
+                try:
+                    train, test = train_test_split(ds, test_size=self.train_test_rate)
+                except ValueError:
+                    train = ds
+                    self.X_test = np.array([])
+                    self.y_test = np.array([])
+                    print('The exception below was ignored')
+                    print(traceback.format_exc())
+                    print('No test data exists')
+                else:
+                    self.X_test = np.array([t.arr for t in test]) / 255
+                    self.y_test = np.array([t.target for t in test])
+                finally:
+                    self.X_train = np.array([t.arr for t in train]) / 255
+                    self.y_train = np.array([t.target for t in train])
             print('\nfinish!\n\n####################\n')
 
             serialize_write(
@@ -190,11 +198,14 @@ class SignClassifier:
         print('\n********************\n\ndeeplearning\n\n********************\n')
         sign = cls()
         sign.loaddataset()
-        sign.makecnnmodel()
-        sign.training()
-        sign.drawlossgraph()
+        if len(sign.y_train) == 0:
+            print('No train data exists')
+        else:
+            sign.makecnnmodel()
+            sign.training()
+            sign.drawlossgraph()
         if len(sign.y_test) == 0:
-            print('no test data')
+            print('No test data exists')
         else:
             sign.testevaluate()
             sign.prediction()
