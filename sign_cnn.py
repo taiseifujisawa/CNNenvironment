@@ -37,7 +37,7 @@ class SignClassifier:
         self.lossfunc = 'sparse_categorical_crossentropy'
         self.epochs = 1
         self.batchsize = 8
-        self.loadfrompickle = False         # テストデータ数を変えるときはFalseにしてdatasetから読み込みなおす
+        self.loadfrompickle = True         # テストデータ数を変えるときはFalseにしてdatasetから読み込みなおす
 
     def loaddataset(self):
         """データの読み込み、成形
@@ -254,7 +254,7 @@ class SignClassifier:
             output_filepath = Path.cwd() / save_path / output_filename
         else:
             output_filepath = Path(f'{save_path}.{extension}')
-        dpi = (self.input_shape[1], self.input_shape[0])            # numpyは(row, column)　opencvは(x, y)で逆
+        dpi = (self.input_shape[1], self.input_shape[0])            # numpyは(row, column)　opencvは(x, y)で逆(指定の仕方)
         target_dpi = dpi if target_dpi == None else target_dpi
         if overwrite or not output_filepath.exists():
             arr = 1 - self.X_test[test_no] if inverse else self.X_test[test_no]
@@ -317,8 +317,8 @@ def main():
 
         # 全テストデータをpngに出力
         for i, y_test in enumerate(tqdm(sign.y_test)):
-            Path(result_dir / f'{y_test}/{i}').mkdir(exist_ok=True)
-            sign.array2img(i, result_dir / f'{y_test}/{i}/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}')
+            #Path(result_dir / f'{y_test}/{i}').mkdir(exist_ok=True)
+            sign.array2img(i, result_dir / f'{y_test}/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}')
 
 if __name__ == '__main__':
     main()
