@@ -58,7 +58,7 @@ class GradCam:
         # make heatmap
         heatmap = cam_resized / cam_resized.max() * 255       # shape: (layercol, layerrow)
         # apply color
-        hm_colored = cv2.applyColorMap(np.uint8(heatmap), cv2.COLORMAP_HOT)    # shape: (layercol, layerrow)
+        hm_colored = cv2.applyColorMap(np.uint8(heatmap), cv2.COLORMAP_JET)    # shape: (layercol, layerrow)
 
         # 元の画像をカラー化
         org_img = cv2.cvtColor(np.uint8(img * 255), cv2.COLOR_GRAY2BGR)     # shape: (layercol, layerrow)
@@ -84,7 +84,7 @@ def main():
     sign = SignClassifier.reconstructmodel()
     cam = GradCam(sign)
 
-    result_dir = Path.cwd() / 'test_results'
+    result_dir = Path.cwd() / '_test_results'
     result_dir.mkdir(exist_ok=True)
     (result_dir / 'failure').mkdir(exist_ok=True)
     for i in range(sign.outputs):
