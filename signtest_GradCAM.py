@@ -84,7 +84,7 @@ def main():
     sign = SignClassifier.reconstructmodel()
     cam = GradCam(sign)
 
-    result_dir = Path.cwd() / '_test_results'
+    result_dir = Path.cwd() / 'test_results'
     result_dir.mkdir(exist_ok=True)
     (result_dir / 'failure').mkdir(exist_ok=True)
     for i in range(sign.outputs):
