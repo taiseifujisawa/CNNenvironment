@@ -9,6 +9,10 @@ from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from dataclasses import dataclass
 import traceback
+import shutil
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard, ModelCheckpoint
+
 
 @dataclass
 class DataSet:
@@ -29,14 +33,14 @@ class SignClassifier:
         self.model_name = 'my_model'
         self.model_savefile = 'my_model.h5'
         self.last_layername = "last_conv"
-        self.train_test_rate = 1          # self.loadfrompickle = Falseなら保存済みのpicklefileのtestdataの割合に書き変わる
-        self.validation_rate = 0          # self.loadfrompickleによらず一定
+        self.train_test_rate = 0.2          # self.loadfrompickle = Falseなら保存済みのpicklefileのtestdataの割合に書き変わる
+        self.validation_rate = 0.2          # self.loadfrompickleによらず一定
         self.input_shape = (250, 1000)      # numpy, (row, column)
         self.outputs = 32
-        self.optimizer = 'Adam'
+        self.optimizer = Adam(lr=0.001)
         self.lossfunc = 'sparse_categorical_crossentropy'
-        self.epochs = 1
-        self.batchsize = 8
+        self.epochs = 50
+        self.batchsize = 32
         self.loadfrompickle = True         # テストデータ数を変えるときはFalseにしてdatasetから読み込みなおす
 
     def loaddataset(self):
@@ -117,12 +121,18 @@ class SignClassifier:
             tf.keras.layers.Reshape(self.input_shape + (1,), input_shape=self.input_shape),
             tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-            tf.keras.layers.Conv2D(64, (3, 3), activation='relu', name=self.last_layername),
+            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+            tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+            tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
+            tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+            tf.keras.layers.Conv2D(32, (3, 3), activation='relu', name=self.last_layername),
+            tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+            #tf.keras.layers.Dropout(0.5),
             tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(32, activation='relu'),
-            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(64, activation='relu'),
+            #tf.keras.layers.Dropout(0.5),
             tf.keras.layers.Dense(self.outputs, activation='softmax')
         ], name=self.model_name)
         self.model.summary()
@@ -132,9 +142,33 @@ class SignClassifier:
         """訓練
         """
         print('\n====================\n\ntraining\n\n====================\n')
-        self.history = self.model.fit(self.X_train, self.y_train,\
-            batch_size=self.batchsize, epochs=self.epochs, validation_split=self.validation_rate)
-        self.model.save(self.model_savefile)
+        early_stopping = EarlyStopping(
+                        monitor='val_loss',
+                        min_delta=0.0,
+                        patience=5
+                )
+        reduce_lr = ReduceLROnPlateau(
+                                monitor='val_loss',
+                                factor=0.5,
+                                patience=2,
+                                min_lr=0.0001
+                        )
+        tensor_board = TensorBoard(
+            log_dir=f'tensorboard_{self.model_name}',
+            histogram_freq=1,
+            write_images=True
+        )
+        check_point = ModelCheckpoint(
+            f'best_{self.model_savefile}',
+            monitor='val_loss',
+            verbose=1,
+            save_best_only=True,
+            save_weights_only=False
+        )
+        self.history = self.model.fit(self.X_train, self.y_train,
+            batch_size=self.batchsize, epochs=self.epochs, validation_split=self.validation_rate,
+            callbacks=[early_stopping, reduce_lr, tensor_board, check_point])
+        self.model.save(f'last_{self.model_savefile}')
 
     def drawlossgraph(self):
         """損失関数の描画
@@ -223,7 +257,7 @@ class SignClassifier:
         sign = cls()
         sign.loaddataset()
         try:
-            sign.model = tf.keras.models.load_model(sign.model_savefile)
+            sign.model = tf.keras.models.load_model(f'best_{sign.model_savefile}')
         except OSError as e:
             print("No model exists")
             raise e
@@ -303,6 +337,10 @@ def main():
     else:
         # failureとクラスごとのディレクトリ作成
         result_dir = Path.cwd() / 'test_results'
+        try:
+            shutil.rmtree(str(result_dir))
+        except:
+            pass
         result_dir.mkdir(exist_ok=True)
         (result_dir / 'failure').mkdir(exist_ok=True)
         for i in range(sign.outputs):
