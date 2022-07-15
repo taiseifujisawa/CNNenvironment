@@ -29,8 +29,8 @@ def csv2nparray(csvpath, rate, x_max, y_max):
   # extract writing spot
   df_writing = df[df["Thickness"] != 0]
   # append writing spot
-  for x, y, t in tqdm(zip(df_writing["X cood."], df_writing["Y cood."], df_writing["Thickness"])):
-    arr = downsampling(arr, x, y, rate, x_max, y_max)
+  for x, y, p in tqdm(zip(df_writing["X cood."], df_writing["Y cood."], df_writing["Pressure"])):
+    arr = downsampling(arr, x, y, rate, x_max, y_max, p/4095)
 
   arr = 1 - arr
 
@@ -46,6 +46,8 @@ def changedpi(img, resolation):
 
 
 def trimming(img):
+  img_tmp = np.copy(img)
+  img = np.floor(img)
   for i, column in enumerate(img):
     if (not 1) in column:
       left = i
@@ -72,7 +74,7 @@ def trimming(img):
     else:
       pass
 
-  return img[left:right, up:down]
+  return img_tmp[left:right, up:down]
 
 
 def padding(img, pad_x, pad_y):
