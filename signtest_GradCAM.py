@@ -26,8 +26,12 @@ class GradCam:
         with tf.GradientTape() as tape:
             # shape: (layercol, layerrow, layerchannel), (outputs,)
             conv_outputs, predictions = grad_model(img_wide)
-            class_idx = np.argmax(predictions[0])       # shape: (1,)
-            loss = predictions[0][class_idx]            # shape: (1,)
+            if self.trained_model.lossfunc == 'binary_crossentropy':
+                class_idx = 0 if predictions[0] < 0.5 else 1
+                loss = predictions[0][0]
+            else:
+                class_idx = np.argmax(predictions[0])       # shape: (1,)
+                loss = predictions[0][class_idx]            # shape: (1,)
         # backpropを取得
         grads = tape.gradient(loss, conv_outputs)       # shape: (layercol, layerrow, layerchannel)
 
@@ -35,6 +39,9 @@ class GradCam:
         # to <class 'numpy.ndarray'>
         conv_outputs = conv_outputs.numpy()[0]     # shape: (layercol, layerrow, layerchannel)
         grads = grads.numpy()[0]                   # shape: (layercol, layerrow, layerchannel)
+        # values smaller than zero in the two numpy arrays above are all casted to zero
+        conv_outputs[conv_outputs < 0] = 0     # shape: (layercol, layerrow, layerchannel)
+        grads[grads < 0] = 0                   # shape: (layercol, layerrow, layerchannel)
 
         # global average pooling
         layer_weights = np.mean(grads, axis=(0, 1))     # shape: (layerchannel,)
@@ -55,6 +62,9 @@ class GradCam:
             , cv2.INTER_LINEAR
             ) # shape: (layercol, layerrow)
 
+        #if cam_resized.max() == 0:
+        #    with open('grad_vanish.csv', 'a') as f:
+        #        f.write('gradient vanished\n')
         # make heatmap
         heatmap = cam_resized / cam_resized.max() * 255       # shape: (layercol, layerrow)
         # apply color

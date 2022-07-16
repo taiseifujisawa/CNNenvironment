@@ -6,6 +6,8 @@ from pathlib import Path
 import shutil
 from downsampling import downsampling
 import codecs
+from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 
 def csv2nparray(csvpath, rate, x_max, y_max):
@@ -23,12 +25,14 @@ def csv2nparray(csvpath, rate, x_max, y_max):
   df.set_index("Time", inplace=True)
 
   # np.array all whose components are zero
-  arr = np.ones((x_max, y_max))
+  arr = np.zeros((x_max, y_max))
   # extract writing spot
   df_writing = df[df["Thickness"] != 0]
   # append writing spot
-  for x, y in zip(df_writing["X cood."], df_writing["Y cood."]):
-    arr = downsampling(arr, x, y, rate, x_max, y_max)
+  for x, y, p in tqdm(zip(df_writing["X cood."], df_writing["Y cood."], df_writing["Pressure"])):
+    arr = downsampling(arr, x, y, rate, x_max, y_max, p/4095)
+
+  arr = 1 - arr
 
   return arr
 
@@ -42,33 +46,35 @@ def changedpi(img, resolation):
 
 
 def trimming(img):
+  img_tmp = np.copy(img)
+  img = np.floor(img)
   for i, column in enumerate(img):
-    if 0 in column:
+    if (not 1) in column:
       left = i
       break
     else:
       pass
   for i, column in enumerate(img[::-1]):
-    if 0 in column:
+    if (not 1) in column:
       right = -i
       break
     else:
       pass
   img_T = img.T
   for i, column in enumerate(img_T):
-    if 0 in column:
+    if (not 1) in column:
       up = i
       break
     else:
       pass
   for i, column in enumerate(img_T[::-1]):
-    if 0 in column:
+    if (not 1) in column:
       down = -i
       break
     else:
       pass
 
-  return img[left:right, up:down]
+  return img_tmp[left:right, up:down]
 
 
 def padding(img, pad_x, pad_y):
@@ -95,6 +101,9 @@ def csv2img(input_file_path: Path, output_file_path: Path, x_max: int, y_max: in
   arr *= 255
   arr_dpichanged *= 255
   arr_padded *= 255
+  arr.astype(int)
+  arr_dpichanged.astype(int)
+  arr_padded.astype(int)
 
   ### make "row"
   # make folders on cwd
@@ -132,7 +141,7 @@ def csv2img(input_file_path: Path, output_file_path: Path, x_max: int, y_max: in
 def main():
   # filepath
   #INPUT_FILE_PATH = Path(r'C:\Users\Taisei\development\01b_signdata_copy\宮原\サインテスト２\Csv\Sign-2016-宮原悠司-1-True-1.csv')
-  INPUT_FILE_PATH = r'C:\Users\taise\Documents\大世のドキュメント\横浜国立大学\中田研\csv2img\坪井\サインテスト２\Csv\Sign-2022-坪井陽人-1-True-3.csv'
+  INPUT_FILE_PATH = r'C:\Users\taise\Documents\Taisei\YNU\NakataLab\04_csv2img\csv2img_old\csv\Sign-2016-宮原悠司-1-True-1.csv'
   OUTPUT_FILE_PATH = Path('./out.bmp')
   # flame size
   X_MAX = 13000
@@ -143,7 +152,7 @@ def main():
   RESOLUTION = 640 ** 2
   # target padding dpi
   PADDED_X = 2000
-  PADDED_Y = 300
+  PADDED_Y = 500
 
   csv2img(INPUT_FILE_PATH, OUTPUT_FILE_PATH, X_MAX, Y_MAX, DSR, RESOLUTION, PADDED_X, PADDED_Y)
 

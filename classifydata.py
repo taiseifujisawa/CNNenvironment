@@ -4,6 +4,7 @@ from csv_to_img import csv2img
 from tqdm import tqdm
 
 cwd = Path.cwd()
+dataset_path = Path(r'C:\Users\Taisei\development\01_02_signdata_row')
 RELATIVE_CSV_PATH = 'サインテスト２/Csv'
 TRUE_FOLDER = cwd / 'true'
 FALSE_FOLDER = cwd / 'false'
@@ -22,7 +23,7 @@ PADDED_X = 2000
 PADDED_Y = 500
 
 # get all subjects' directories
-dirs = [dir / RELATIVE_CSV_PATH for dir in cwd.iterdir() if dir.is_dir() \
+dirs = [dir / RELATIVE_CSV_PATH for dir in dataset_path.iterdir() if dir.is_dir() \
   and dir not in [TRUE_FOLDER, FALSE_FOLDER, cwd / '__pycache__', cwd / '.git',\
     cwd / 'row', cwd / 'down_sampled', cwd / 'trimmed', cwd / 'cam', cwd / 'dataset']]
 

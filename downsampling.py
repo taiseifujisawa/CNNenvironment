@@ -1,4 +1,4 @@
-def downsampling(array, x, y, rate, x_max, y_max):
+def downsampling(array, x, y, rate, x_max, y_max, thickness=1.0):
   assert rate > 0, "Down sampling rate should be more than 0"
   def leftlimit():
     if x - rate < 0:
@@ -24,84 +24,84 @@ def downsampling(array, x, y, rate, x_max, y_max):
     return leftlimit() + rightlimit() + uplimit() + downlimit()
 
   if limitcase() == 0:
-    array[x-rate:x, y-rate:y] = 0   # leftabove
-    array[x:x+rate, y-rate:y] = 0   # rightabove
-    array[x-rate:x, y:y+rate] = 0   # leftbelow
-    array[x:x+rate, y:y+rate] = 0   # rightbelow
+    array[x-rate:x, y-rate:y] = thickness   # leftabove
+    array[x:x+rate, y-rate:y] = thickness   # rightabove
+    array[x-rate:x, y:y+rate] = thickness   # leftbelow
+    array[x:x+rate, y:y+rate] = thickness   # rightbelow
   if limitcase() == 1:
-    array[:x, y-rate:y] = 0
-    array[x:x+rate, y-rate:y] = 0
-    array[:x, y:y+rate] = 0
-    array[x:x+rate, y:y+rate] = 0
+    array[:x, y-rate:y] = thickness
+    array[x:x+rate, y-rate:y] = thickness
+    array[:x, y:y+rate] = thickness
+    array[x:x+rate, y:y+rate] = thickness
   if limitcase() == 2:
-    array[x-rate:x, y-rate:y] = 0
-    array[x:, y-rate:y] = 0
-    array[x-rate:x, y:y+rate] = 0
-    array[x:, y:y+rate] = 0
+    array[x-rate:x, y-rate:y] = thickness
+    array[x:, y-rate:y] = thickness
+    array[x-rate:x, y:y+rate] = thickness
+    array[x:, y:y+rate] = thickness
   if limitcase() == 3:
-    array[:x, y-rate:y] = 0
-    array[x:, y-rate:y] = 0
-    array[:x, y:y+rate] = 0
-    array[x:, y:y+rate] = 0
+    array[:x, y-rate:y] = thickness
+    array[x:, y-rate:y] = thickness
+    array[:x, y:y+rate] = thickness
+    array[x:, y:y+rate] = thickness
   if limitcase() == 4:
-    array[x-rate:x, :y] = 0
-    array[x:x+rate, :y] = 0
-    array[x-rate:x, y:y+rate] = 0
-    array[x:x+rate, y:y+rate] = 0
+    array[x-rate:x, :y] = thickness
+    array[x:x+rate, :y] = thickness
+    array[x-rate:x, y:y+rate] = thickness
+    array[x:x+rate, y:y+rate] = thickness
   if limitcase() == 5:
-    array[:x, :y] = 0
-    array[x:x+rate, :y] = 0
-    array[:x, y:y+rate] = 0
-    array[x:x+rate, y:y+rate] = 0
+    array[:x, :y] = thickness
+    array[x:x+rate, :y] = thickness
+    array[:x, y:y+rate] = thickness
+    array[x:x+rate, y:y+rate] = thickness
   if limitcase() == 6:
-    array[x-rate:x, :y] = 0
-    array[x:, :y] = 0
-    array[x-rate:x, y:y+rate] = 0
-    array[x:, y:y+rate] = 0
+    array[x-rate:x, :y] = thickness
+    array[x:, :y] = thickness
+    array[x-rate:x, y:y+rate] = thickness
+    array[x:, y:y+rate] = thickness
   if limitcase() == 7:
-    array[:x, :y] = 0
-    array[x:, :y] = 0
-    array[:x, y:y+rate] = 0
-    array[x:, y:y+rate] = 0
+    array[:x, :y] = thickness
+    array[x:, :y] = thickness
+    array[:x, y:y+rate] = thickness
+    array[x:, y:y+rate] = thickness
   if limitcase() == 8:
-    array[x-rate:x, y-rate:y] = 0
-    array[x:x+rate, y-rate:y] = 0
-    array[x-rate:x, y:] = 0
-    array[x:x+rate, y:] = 0
+    array[x-rate:x, y-rate:y] = thickness
+    array[x:x+rate, y-rate:y] = thickness
+    array[x-rate:x, y:] = thickness
+    array[x:x+rate, y:] = thickness
   if limitcase() == 9:
-    array[:x, y-rate:y] = 0
-    array[x:x+rate, y-rate:y] = 0
-    array[:x, y:] = 0
-    array[x:x+rate, y:] = 0
+    array[:x, y-rate:y] = thickness
+    array[x:x+rate, y-rate:y] = thickness
+    array[:x, y:] = thickness
+    array[x:x+rate, y:] = thickness
   if limitcase() == 10:
-    array[x-rate:x, y-rate:y] = 0
-    array[x:, y-rate:y] = 0
-    array[x-rate:x, y:] = 0
-    array[x:, y:] = 0
+    array[x-rate:x, y-rate:y] = thickness
+    array[x:, y-rate:y] = thickness
+    array[x-rate:x, y:] = thickness
+    array[x:, y:] = thickness
   if limitcase() == 11:
-    array[:x, y-rate:y] = 0
-    array[x:, y-rate:y] = 0
-    array[:x, y:] = 0
-    array[x:, y:] = 0
+    array[:x, y-rate:y] = thickness
+    array[x:, y-rate:y] = thickness
+    array[:x, y:] = thickness
+    array[x:, y:] = thickness
   if limitcase() == 12:
-    array[x-rate:x, :y] = 0
-    array[x:x+rate, :y] = 0
-    array[x-rate:x, y:] = 0
-    array[x:x+rate, y:] = 0
+    array[x-rate:x, :y] = thickness
+    array[x:x+rate, :y] = thickness
+    array[x-rate:x, y:] = thickness
+    array[x:x+rate, y:] = thickness
   if limitcase() == 13:
-    array[:x, :y] = 0
-    array[x:x+rate, :y] = 0
-    array[:x, y:] = 0
-    array[x:x+rate, y:] = 0
+    array[:x, :y] = thickness
+    array[x:x+rate, :y] = thickness
+    array[:x, y:] = thickness
+    array[x:x+rate, y:] = thickness
   if limitcase() == 14:
-    array[x-rate:x, :y] = 0
-    array[x:, :y] = 0
-    array[x-rate:x, y:] = 0
-    array[x:, y:] = 0
+    array[x-rate:x, :y] = thickness
+    array[x:, :y] = thickness
+    array[x-rate:x, y:] = thickness
+    array[x:, y:] = thickness
   if limitcase() == 15:
-    array[:x, :y] = 0
-    array[x:, :y] = 0
-    array[:x, y:] = 0
-    array[x:, y:] = 0
+    array[:x, :y] = thickness
+    array[x:, :y] = thickness
+    array[:x, y:] = thickness
+    array[x:, y:] = thickness
 
   return array
