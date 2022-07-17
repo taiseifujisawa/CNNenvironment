@@ -34,6 +34,8 @@ class GradCam:
                 loss = predictions[0][class_idx]            # shape: (1,)
         # backpropを取得
         grads = tape.gradient(loss, conv_outputs)       # shape: (layercol, layerrow, layerchannel)
+        #if grads.numpy().max() <= 0:
+            #print()
 
         # cast <class 'tensorflow.python.framework.ops.EagerTensor'>
         # to <class 'numpy.ndarray'>
