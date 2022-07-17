@@ -340,10 +340,10 @@ def serialize_read(filepath: Path):
 def main():
     for subj in tqdm(range(len([i for i in (Path.cwd() / 'dataset_individual').iterdir() if i.is_dir()]))):
         # ディープラーニング実行
-        #sign = SignClassifier.deeplearning(f'{str(Path.cwd())}/dataset_individual/{subj}')
+        sign = SignClassifier.deeplearning(f'{str(Path.cwd())}/dataset_individual/{subj}')
 
         # 保存済みモデル再構築
-        sign = SignClassifier.reconstructmodel(f'{str(Path.cwd())}/dataset_individual/{subj}')
+        #sign = SignClassifier.reconstructmodel(f'{str(Path.cwd())}/dataset_individual/{subj}')
 
         # gradcam起動
         cam = GradCam(sign)

@@ -5,8 +5,8 @@ from pathlib import Path
 from tqdm import tqdm
 
 wd = Path.cwd()
-ds_t = wd / '..' / '01a_signdata_dataset' / 'dataset' / 'true'
-ds_f = wd / '..' / '01a_signdata_dataset' / 'dataset' / 'false'
+ds_t = wd / '..' / '01a_signdata_ind' / 'dataset' / 'true'
+ds_f = wd / '..' / '01a_signdata_ind' / 'dataset' / 'false'
 new_ds = wd / 'dataset_individual'
 new_ds.mkdir(exist_ok=True)
 

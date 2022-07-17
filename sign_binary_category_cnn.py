@@ -121,13 +121,13 @@ class SignClassifier:
             tf.keras.layers.Reshape(self.input_shape + (1,), input_shape=self.input_shape),
             tf.keras.layers.Conv2D(16, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-            tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
+            tf.keras.layers.Conv2D(16, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+            tf.keras.layers.Conv2D(16, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+            tf.keras.layers.Conv2D(16, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-            tf.keras.layers.Conv2D(32, (3, 3), activation='relu', name=self.last_layername),
+            tf.keras.layers.Conv2D(16, (3, 3), activation='relu', name=self.last_layername),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
             #tf.keras.layers.Dropout(0.5),
             tf.keras.layers.Flatten(),
@@ -153,12 +153,12 @@ class SignClassifier:
         early_stopping = EarlyStopping(
                         monitor='val_loss',
                         min_delta=0.0,
-                        patience=5
+                        patience=20
                 )
         reduce_lr = ReduceLROnPlateau(
                                 monitor='val_loss',
                                 factor=0.5,
-                                patience=2,
+                                patience=5,
                                 min_lr=0.0001
                         )
         tensor_board = TensorBoard(
@@ -337,49 +337,58 @@ def serialize_read(filepath: Path):
     return pic
 
 
-def main():
-    for subj in tqdm(range(len([i for i in (Path.cwd() / 'dataset_individual').iterdir() if i.is_dir()]))):
-        # ディープラーニング実行
-        sign = SignClassifier.deeplearning(f'{str(Path.cwd())}/dataset_individual/{subj}')
+def run(subj: int):
+    # ディープラーニング実行
+    sign = SignClassifier.deeplearning(f'{str(Path.cwd())}/dataset_individual/{subj}')
 
-        # 保存済みモデル再構築
-        #sign = SignClassifier.reconstructmodel(f'{str(Path.cwd())}/dataset_individual/{subj}')
+    # 保存済みモデル再構築
+    #sign = SignClassifier.reconstructmodel(f'{str(Path.cwd())}/dataset_individual/{subj}')
 
-        # gradcam起動
-        cam = GradCam(sign)
+    # gradcam起動
+    cam = GradCam(sign)
 
-        if len(sign.y_test) == 0:
+    if len(sign.y_test) == 0:
+        pass
+    else:
+        # failureとクラスごとのディレクトリ作成
+        result_dir = sign.wd / 'test_results'
+        try:
+            shutil.rmtree(str(result_dir))
+        except:
             pass
-        else:
-            # failureとクラスごとのディレクトリ作成
-            result_dir = sign.wd / 'test_results'
-            try:
-                shutil.rmtree(str(result_dir))
-            except:
-                pass
-            result_dir.mkdir(exist_ok=True)
-            (result_dir / 'failure').mkdir(exist_ok=True)
-            for i in range(2):
-                (result_dir / f'{i}').mkdir(exist_ok=True)
+        result_dir.mkdir(exist_ok=True)
+        (result_dir / 'failure').mkdir(exist_ok=True)
+        for i in range(2):
+            (result_dir / f'{i}').mkdir(exist_ok=True)
 
-            # 間違えたテストデータをpng, csvに出力
-            with open(sign.wd / 'failure.csv', 'w', encoding='utf-8') as f:
-                f.write('index,prediction,answer\n')
-                for i in sign.index_failure:
-                    sign.array2img(i, result_dir / f'failure/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}')
-                    f.write(f'{i},{sign.predict[i]},{sign.y_test[i]}\n')
-                    # gradcam
-                    img = cam.get_cam(i)
-                    cam.save_img(img, i, result_dir / f'failure/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}_cam')
-
-            # 全テストデータをpngに出力
-            for i, y_test in enumerate(tqdm(sign.y_test)):
-                #Path(result_dir / f'{y_test}/{i}').mkdir(exist_ok=True)
-                sign.array2img(i, result_dir / f'{y_test}/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}')
+        # 間違えたテストデータをpng, csvに出力
+        with open(sign.wd / 'failure.csv', 'w', encoding='utf-8') as f:
+            f.write('index,prediction,answer\n')
+            for i in sign.index_failure:
+                sign.array2img(i, result_dir / f'failure/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}')
+                f.write(f'{i},{sign.predict[i]},{sign.y_test[i]}\n')
                 # gradcam
                 img = cam.get_cam(i)
-                cam.save_img(img, i, result_dir / f'{y_test}/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}_cam')
+                cam.save_img(img, i, result_dir / f'failure/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}_cam')
+
+        # 全テストデータをpngに出力
+        for i, y_test in enumerate(tqdm(sign.y_test)):
+            #Path(result_dir / f'{y_test}/{i}').mkdir(exist_ok=True)
+            sign.array2img(i, result_dir / f'{y_test}/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}')
+            # gradcam
+            img = cam.get_cam(i)
+            cam.save_img(img, i, result_dir / f'{y_test}/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}_cam')
+
+def main():
+    for subj in tqdm(range(len([i for i in (Path.cwd() / 'dataset_individual').iterdir() if i.is_dir() and i.name != 'all']))):
+        run(subj)
+
+
 
 if __name__ == '__main__':
     main()
-    input('push enter')
+    #l = [1,2,4,6,7,8,9,10,11,13,14]
+    #for i in tqdm(l):
+    #    run(i)
+    #run(13)
+    
