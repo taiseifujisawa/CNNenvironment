@@ -111,7 +111,7 @@ class SignClassifier:
             print(training_labels[:5])
             plotImages(training_images[:5])
         #check()
-
+        pass
 
     def makecnnmodel(self):
         """モデルの作成(Sequential API)
