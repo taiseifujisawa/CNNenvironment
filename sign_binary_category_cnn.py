@@ -13,7 +13,7 @@ import shutil
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard, ModelCheckpoint
 from keras.preprocessing.image import ImageDataGenerator
-from keras.utils.image_utils import array_to_img, img_to_array, load_img
+from keras.utils.image_utils import array_to_img, img_to_array, load_img, save_img
 from signtest_GradCAM import GradCam
 
 
