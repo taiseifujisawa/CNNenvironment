@@ -19,7 +19,7 @@ from cnn import sign_classifier_cnn
 
 
 class SignClassifier:
-    def __init__(self, wd: str):
+    def __init__(self, wd=Path.cwd()):
         """cnnの諸元の設定
         """
         RANDOM_SEED = 1
@@ -241,30 +241,22 @@ class SignClassifier:
         print('Test result:')
         print(tf.math.confusion_matrix(answers, predictions).numpy())
 
-    @classmethod
-    def deeplearning(cls, wd=Path.cwd()):
+    def deeplearning(self):
         """ディープラーニングを実行
-
-        Returns:
-            sign: SignClassifierオブジェクト
         """
         print('\n********************\n\ndeeplearning\n\n********************\n')
-        #sign = cls(r'C:\Users\nktlab\Desktop\Experiment\fujisawa\03_sign_classifier_individual_20220711\dataset_individual\0')
-        sign = cls(wd)
-        assert sign.train_test_rate != 1, 'No train data exists. It is no use you having NN learn.'
-        sign.loaddataset()
-        sign.makecnnmodel()
-        sign.training()
-        sign.drawlossgraph()
-        if sign.train_test_rate == 0:
+        assert self.train_test_rate != 1, 'No train data exists. It is no use you having NN learn.'
+        self.loaddataset()
+        self.makecnnmodel()
+        self.training()
+        self.drawlossgraph()
+        if self.train_test_rate == 0:
             print('No test data exists')
         else:
-            sign.testevaluate()
-            sign.prediction()
-        return sign
+            self.testevaluate()
+            self.prediction()
 
-    @classmethod
-    def reconstructmodel(cls, wd=Path.cwd()):
+    def reconstructmodel(self):
         """保存済みモデルの再構築
 
         Raises:
@@ -274,21 +266,19 @@ class SignClassifier:
             sign: SignClassifierオブジェクト
         """
         print('\n********************\n\nreconstructmodel\n\n********************\n')
-        sign = cls(wd)
-        sign.loaddataset()
+        self.loaddataset()
         try:
-            sign.model = tf.keras.models.load_model(sign.wd / f'best_{sign.model_savefile}')
+            self.model = tf.keras.models.load_model(self.wd / f'best_{self.model_savefile}')
         except OSError as e:
             print("No model exists")
             raise e
         else:
-            sign.model.summary()
-            if sign.train_test_rate == 0:
+            self.model.summary()
+            if self.train_test_rate == 0:
                 print('No test data exists')
             else:
-                sign.testevaluate()
-                sign.prediction()
-        return sign
+                self.testevaluate()
+                self.prediction()
 
     def array2img(self, test_no: int, save_path: Path, extension='png', target_dpi=None, inverse=False, overwrite=True):
         """テストデータを画像ファイルとして保存,
@@ -346,11 +336,13 @@ def serialize_read(filepath: Path):
 
 
 def main():
+    sign = SignClassifier()
+
     # ディープラーニング実行
-    sign = SignClassifier.deeplearning()
+    sign.deeplearning()
 
     # 保存済みモデル再構築
-    #sign = SignClassifier.reconstructmodel()
+    #sign.reconstructmodel()
 
     # gradcam起動
     cam = GradCam(sign)
