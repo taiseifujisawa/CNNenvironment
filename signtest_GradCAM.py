@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 import pickle
 from tqdm import tqdm
-from sign_cnn import SignClassifier, serialize_write, serialize_read
+#from sign_cnn import SignClassifier, serialize_write, serialize_read
 
 
 class GradCam:

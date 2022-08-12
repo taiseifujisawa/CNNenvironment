@@ -10,8 +10,10 @@ from sklearn.model_selection import train_test_split
 from dataclasses import dataclass
 import traceback
 import shutil
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard, ModelCheckpoint
+from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard, ModelCheckpoint
+from keras.preprocessing.image import ImageDataGenerator
+from keras.utils.image_utils import array_to_img, img_to_array
 from signtest_GradCAM import GradCam
 
 
@@ -165,7 +167,6 @@ class SignClassifier:
             log_dir=self.wd / f'tensorboard_{self.model_name}',
             histogram_freq=1,
             write_graph=True,
-            write_grads=True,
             write_images=True
         )
         check_point = ModelCheckpoint(
@@ -386,9 +387,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    #main()
     #l = [1,2,4,6,7,8,9,10,11,13,14]
     #for i in tqdm(l):
     #    run(i)
-    #run(13)
-    
+    run(0)
