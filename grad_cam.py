@@ -103,29 +103,3 @@ class GradCam:
                 if label != pred:
                     self.save_img(img * 255, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
                     self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
-
-
-def main():
-    sign = SignClassifier.reconstructmodel()
-    cam = GradCam(sign)
-
-    result_dir = Path.cwd() / 'test_results'
-    result_dir.mkdir(exist_ok=True)
-    (result_dir / 'failure').mkdir(exist_ok=True)
-    for i in range(sign.outputs):
-        (result_dir / f'{i}').mkdir(exist_ok=True)
-
-    # 間違えたテストデータをpngに出力
-    for i in sign.index_failure:
-        img = cam.get_cam(i)
-        cam.save_img(img, i, result_dir / f'failure/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}_cam')
-
-    # 全テストデータをpngに出力
-    for i, y_test in enumerate(tqdm(sign.y_test)):
-        #Path(result_dir / f'{y_test}/{i}').mkdir(exist_ok=True)
-        img = cam.get_cam(i)
-        cam.save_img(img, i, result_dir / f'{y_test}/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}_cam')
-
-
-if __name__ == '__main__':
-    main()

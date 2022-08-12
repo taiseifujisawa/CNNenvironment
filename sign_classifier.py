@@ -14,7 +14,8 @@ from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard, ModelCheckpoint
 from keras.preprocessing.image import ImageDataGenerator
 from keras.utils.image_utils import array_to_img, img_to_array, load_img, save_img
-from signtest_GradCAM import GradCam
+from grad_cam import GradCam
+from cnn import sign_classifier_cnn
 
 
 class SignClassifier:
@@ -344,57 +345,20 @@ def serialize_read(filepath: Path):
     return pic
 
 
-def run(subj: int):
+def main():
     # ディープラーニング実行
-    sign = SignClassifier.deeplearning(f'{str(Path.cwd())}')
+    sign = SignClassifier.deeplearning()
 
     # 保存済みモデル再構築
-    #sign = SignClassifier.reconstructmodel(f'{str(Path.cwd())}/dataset_individual/{subj}')
+    #sign = SignClassifier.reconstructmodel()
 
     # gradcam起動
     cam = GradCam(sign)
-
     if sign.train_test_rate == 0:
         pass
     else:
-        # failureとクラスごとのディレクトリ作成
-        result_dir = sign.wd / 'test_results'
-        try:
-            shutil.rmtree(str(result_dir))
-        except:
-            pass
-        result_dir.mkdir(exist_ok=True)
-        (result_dir / 'failure').mkdir(exist_ok=True)
-        for i in range(2):
-            (result_dir / f'{i}').mkdir(exist_ok=True)
-
-        # 間違えたテストデータをpng, csvに出力
-        with open(sign.wd / 'failure.csv', 'w', encoding='utf-8') as f:
-            f.write('index,prediction,answer\n')
-            for i in sign.index_failure:
-                sign.array2img(i, result_dir / f'failure/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}')
-                f.write(f'{i},{sign.predict[i]},{sign.y_test[i]}\n')
-                # gradcam
-                img = cam.get_cam(i)
-                cam.save_img(img, i, result_dir / f'failure/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}_cam')
-
-        # 全テストデータをpngに出力
-        for i, y_test in enumerate(tqdm(sign.y_test)):
-            #Path(result_dir / f'{y_test}/{i}').mkdir(exist_ok=True)
-            sign.array2img(i, result_dir / f'{y_test}/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}')
-            # gradcam
-            img = cam.get_cam(i)
-            cam.save_img(img, i, result_dir / f'{y_test}/i{i}_p{sign.predict[i]}_a{sign.y_test[i]}_cam')
-
-def main():
-    for subj in tqdm(range(len([i for i in (Path.cwd() / 'dataset_individual').iterdir() if i.is_dir() and i.name != 'all']))):
-        run(subj)
-
+        cam.batch_singularize()
 
 
 if __name__ == '__main__':
-    #main()
-    #l = [1,2,4,6,7,8,9,10,11,13,14]
-    #for i in tqdm(l):
-    #    run(i)
-    run(0)
+    main()
