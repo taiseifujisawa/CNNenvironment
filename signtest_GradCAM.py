@@ -3,18 +3,24 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import numpy as np
 import cv2
-import pickle
+from PIL import Image
+import shutil
+import math
 from tqdm import tqdm
-#from sign_cnn import SignClassifier, serialize_write, serialize_read
+from keras.utils.image_utils import array_to_img, img_to_array, load_img, save_img
 
 
 class GradCam:
     def __init__(self, trained_model):
         self.trained_model = trained_model
+        self.save_dir = self.trained_model.wd / 'test_result'
+        #shutil.rmtree(self.save_dir, ignore_errors=True)
+        self.save_dir.mkdir(exist_ok=True)
+        (self.save_dir / 'failure').mkdir(exist_ok=True)
 
-    def get_cam(self, test_no: int) -> np.ndarray:
+    def get_cam(self, img: np.ndarray) -> np.ndarray:
         # 対象画像、次元追加(読み込む画像が1枚なため、次元を増やしておかないとmodel.predictが出来ない)
-        img = self.trained_model.X_test[test_no]
+        img = img
         img_wide = np.expand_dims(img, axis=0)
 
         # GradCAM用に出力を最終CNNマップ(self.last_conv)とsoftmaxとしたモデルを作成(Functional API)
@@ -78,18 +84,25 @@ class GradCam:
         # 合成
         out = cv2.addWeighted(src1=org_img, alpha=0.4, src2=hm_colored, beta=0.6, gamma=0)     # shape: (layercol, layerrow)
 
-        return out              # shape: (1,)
+        return out, class_idx              # shape: (1,)
 
-    def save_img(self, img: np.ndarray, test_no: int, save_path: Path, extension='png', overwrite=True):
-        if save_path.is_dir():
-            output_filename = f'{test_no}_cam.{extension}'
-            output_filepath = Path.cwd() / save_path / output_filename
-        else:
-            output_filepath = Path(f'{save_path}.{extension}')
-        if overwrite or not output_filepath.exists():
-            cv2.imwrite(str(output_filepath), img)
-        else:
-            print(f'There already exists {output_filepath.name}. Overwrite is not valid.')
+    def save_img(self, img: np.ndarray, save_dir: Path, save_name: Path, extension='.png'):
+        output_filename = f'{save_name}{extension}'
+        output_filepath = save_dir / output_filename
+        cv2.imwrite(str(output_filepath), img)
+
+    def batch_singularize(self):
+        for i, batch in zip(tqdm(range(math.ceil(self.trained_model.test_generator.samples / self.trained_model.batchsize))), self.trained_model.test_generator):
+            for j, img_and_label in enumerate(zip(tqdm(batch[0]), batch[1])):
+                img, label = img_and_label[0], img_and_label[1]
+                test_no = i * self.trained_model.batchsize + j
+                cam, pred = self.get_cam(img)
+                self.save_img(img * 255, self.save_dir, f'{test_no}_a{label}_p{pred}')
+                self.save_img(cam, self.save_dir, f'{test_no}_a{label}_p{pred}_cam')
+
+                if label != pred:
+                    self.save_img(img * 255, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
+                    self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
 
 
 def main():

@@ -2,26 +2,20 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from pathlib import Path
 import numpy as np
-import pandas as pd
+import math
+import random
 import cv2
+from PIL import Image
 import pickle
 from tqdm import tqdm
-from sklearn.model_selection import train_test_split
-from dataclasses import dataclass
 import traceback
 import shutil
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard, ModelCheckpoint
 from keras.preprocessing.image import ImageDataGenerator
-from keras.utils.image_utils import array_to_img, img_to_array
+from keras.utils.image_utils import array_to_img, img_to_array, load_img
 from signtest_GradCAM import GradCam
 
-
-@dataclass
-class DataSet:
-    index: int
-    arr: np.ndarray
-    target: int
 
 class SignClassifier:
     def __init__(self, wd: str):
@@ -30,9 +24,10 @@ class SignClassifier:
         RANDOM_SEED = 1
         tf.random.set_seed(RANDOM_SEED)
         np.random.seed(RANDOM_SEED)
+        random.seed(RANDOM_SEED)
         self.wd = Path(wd)
-        self.truedir = self.wd / 'dataset/true'
-        self.falsedir = self.wd / 'dataset/false'
+        self.datasetdir = self.wd / 'dataset'
+        self.splitted_datasetdir = self.wd / 'dataset_splitted'
         self.model_name = 'my_model'
         self.model_savefile = 'my_model.h5'
         self.last_layername = "last_conv"
@@ -44,84 +39,86 @@ class SignClassifier:
         self.lossfunc = 'sparse_categorical_crossentropy'
         self.epochs = 100
         self.batchsize = 16
-        self.loadfrompickle = False         # テストデータ数を変えるときはFalseにしてdatasetから読み込みなおす
 
     def loaddataset(self):
-        """データの読み込み、成形
-
-        Args:
-            pickle (bool): pickleから読みだすか. Defaults to False.
+        """データの読み込み、成形、data augmentation
         """
         print('\n====================\n\nloaddataset\n\n====================\n')
-        if self.loadfrompickle:
-            self.X_train, self.X_test, self.y_train, self.y_test = serialize_read(self.wd / 'dataset.pkl')
-            self.train_test_rate = len(self.y_test) / (len(self.y_train) + len(self.y_test))
-        else:
-            ds = []
 
-            # trueのラベリングは0
-            print('\n####################\n\nloading true dataset...\n')
-            for i, bmp in enumerate(tqdm(self.truedir.glob('*.bmp'))):
-                ds.append(
-                    DataSet(
-                        i,
-                        cv2.cvtColor(cv2.imread(str(bmp)), cv2.COLOR_BGR2GRAY),
-                        0
-                        )
-                )
-            print('\nfinish!\n\n####################\n')
+        shutil.rmtree(self.splitted_datasetdir)
+        for d in self.datasetdir.iterdir():
+            imgs_shuffled = random.sample(list(d.iterdir()), len(list(d.iterdir())))
+            imgs_test = imgs_shuffled[:int(len(imgs_shuffled) * self.train_test_rate)]
+            imgs_rest = imgs_shuffled[int(len(imgs_shuffled) * self.train_test_rate):]
+            imgs_validation = imgs_rest[:int(len(imgs_rest) * self.train_test_rate)]
+            imgs_train = imgs_rest[int(len(imgs_rest) * self.train_test_rate):]
 
-            # falseのラベリング1
-            print('\n####################\n\nloading false dataset...\n')
-            for i, bmp in enumerate(tqdm(self.falsedir.glob('*.bmp'))):
-                ds.append(
-                    DataSet(
-                    i,
-                    cv2.cvtColor(cv2.imread(str(bmp)), cv2.COLOR_BGR2GRAY),
-                    1
-                    )
-                )
-            print('\nfinish!\n\n####################\n')
+            (self.splitted_datasetdir /'train' / d.name).mkdir(parents=True, exist_ok=True)
+            (self.splitted_datasetdir / 'validation' / d.name).mkdir(parents=True, exist_ok=True)
+            (self.splitted_datasetdir / 'test' / d.name).mkdir(parents=True, exist_ok=True)
+            for i in imgs_train:
+                shutil.copy(i, self.splitted_datasetdir / 'train' / d.name)
+            for i in imgs_validation:
+                shutil.copy(i, self.splitted_datasetdir / 'validation' / d.name)
+            for i in imgs_test:
+                shutil.copy(i, self.splitted_datasetdir / 'test' / d.name)
 
-            print('\n####################\n\nsplitting them...\n')
-            if self.train_test_rate == 1:
-                test = ds
-                self.X_train = np.array([])
-                self.y_train = np.array([])
-                self.X_test = np.array([t.arr for t in test]) / 255
-                self.y_test = np.array([t.target for t in test])
-                print('No train data exists')
-            else:
-                try:
-                    train, test = train_test_split(ds, test_size=self.train_test_rate)
-                except ValueError:
-                    train = ds
-                    self.X_test = np.array([])
-                    self.y_test = np.array([])
-                    print('The exception below was ignored')
-                    print(traceback.format_exc())
-                    print('No test data exists')
-                else:
-                    self.X_test = np.array([t.arr for t in test]) / 255
-                    self.y_test = np.array([t.target for t in test])
-                finally:
-                    self.X_train = np.array([t.arr for t in train]) / 255
-                    self.y_train = np.array([t.target for t in train])
-            print('\nfinish!\n\n####################\n')
+        idg = ImageDataGenerator(rescale=1.0 / 255)
+        print('train data: ', end='')
+        self.train_generator = idg.flow_from_directory(
+            self.splitted_datasetdir / 'train',
+            target_size=self.input_shape,
+            color_mode='grayscale',
+            shuffle=True,
+            class_mode="sparse",
+            batch_size=self.batchsize
+            )
+        print('validation data: ', end='')
+        self.validation_generator = idg.flow_from_directory(
+            self.splitted_datasetdir / 'validation',
+            target_size=self.input_shape,
+            color_mode='grayscale',
+            shuffle=True,
+            class_mode="sparse",
+            batch_size=self.batchsize
+            )
+        print('test data: ', end='')
+        self.test_generator = idg.flow_from_directory(
+            self.splitted_datasetdir / 'test',
+            target_size=self.input_shape,
+            color_mode='grayscale',
+            shuffle=False,
+            class_mode="sparse",
+            batch_size=self.batchsize
+            )
 
-            serialize_write(
-                (self.X_train, self.X_test, self.y_train, self.y_test)
-                , self.wd / 'dataset.pkl'
-                )
-        print(f'# of train data : {len(self.y_train)}, # of test data : {len(self.y_test)}')
+        print(
+            'labels of train data: {}\nlabels of validation data: {}\nlabels of test data: {}'.
+            format(self.train_generator.class_indices,self.validation_generator.class_indices,self.test_generator.class_indices)
+            )
+
+        # data augmentationチェック用
+        def plotImages(images_arr):
+            fig, axes = plt.subplots(1, 5, figsize=(10,10))
+            axes = axes.flatten()
+            for img, ax in zip( images_arr, axes):
+                ax.imshow(img)
+                ax.axis('off')
+            plt.tight_layout()
+            plt.show()
+        def check():
+            training_images, training_labels = next(self.train_generator)
+            print(training_labels[:5])
+            plotImages(training_images[:5])
+        #check()
+
 
     def makecnnmodel(self):
         """モデルの作成(Sequential API)
         """
         print('\n====================\n\nmakecnnmodel\n\n====================\n')
         self.model = tf.keras.Sequential([
-            tf.keras.layers.Reshape(self.input_shape + (1,), input_shape=self.input_shape),
-            tf.keras.layers.Conv2D(16, (3, 3), activation='relu'),
+            tf.keras.layers.Conv2D(16, (3, 3), activation='relu', input_shape=self.input_shape+(1,)),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
             tf.keras.layers.Conv2D(16, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
@@ -155,12 +152,12 @@ class SignClassifier:
         early_stopping = EarlyStopping(
                         monitor='val_loss',
                         min_delta=0.0,
-                        patience=20
+                        patience=5
                 )
         reduce_lr = ReduceLROnPlateau(
                                 monitor='val_loss',
                                 factor=0.5,
-                                patience=5,
+                                patience=2,
                                 min_lr=0.0001
                         )
         tensor_board = TensorBoard(
@@ -176,11 +173,17 @@ class SignClassifier:
             save_best_only=True,
             save_weights_only=False
         )
-        self.history = self.model.fit(self.X_train, self.y_train,
-            batch_size=self.batchsize, epochs=self.epochs, validation_split=self.validation_rate,
+        self.history = self.model.fit(
+            self.train_generator,
+            steps_per_epoch=math.ceil(self.train_generator.samples / self.batchsize),
+            validation_data=self.validation_generator,
+            validation_steps=math.ceil(self.validation_generator.samples / self.batchsize),
+            epochs=self.epochs,
+            verbose=1,
             callbacks=[early_stopping, reduce_lr, tensor_board, check_point])
         self.model.save(self.wd / f'last_{self.model_savefile}')
-        self.model = tf.keras.models.load_model(self.wd / f'best_{self.model_savefile}')
+        self.model = tf.keras.models.load_model(self.wd / f'best_{self.model_savefile}'
+        )
 
     def drawlossgraph(self):
         """損失関数の描画
@@ -219,7 +222,7 @@ class SignClassifier:
         """テストデータによる評価
         """
         print('\n====================\n\ntestevaluate\n\n====================\n')
-        test_loss, test_acc = self.model.evaluate(self.X_test, self.y_test, verbose=0)
+        test_loss, test_acc = self.model.evaluate(self.test_generator, verbose=1, batch_size=self.batchsize)
         print('Test loss:', test_loss)
         print('Test accuracy:', test_acc)
 
@@ -227,12 +230,15 @@ class SignClassifier:
         """全テストデータで予測、予測結果と間違えたテストデータのインデックスpickle化して保存
         """
         print('\n====================\n\nprediction\n\n====================\n')
-        predictions = self.model.predict(self.X_test)
+        predictions = self.model.predict(self.test_generator, verbose=1, batch_size=self.batchsize)
         predictions = [np.argmax(pred) for pred in predictions]
-        index_failure = [i for i, (p, t) in enumerate(zip(predictions, self.y_test)) if p != t]
+        answers = self.test_generator.classes
+        index_failure = [i for i, (p, t) in enumerate(zip(predictions, answers)) if p != t]
         serialize_write((predictions, index_failure), self.wd / 'predictions.pkl')
         self.predict = predictions
         self.index_failure = index_failure
+        print('Test result:')
+        print(tf.math.confusion_matrix(answers, predictions).numpy())
 
     @classmethod
     def deeplearning(cls, wd=Path.cwd()):
@@ -249,7 +255,7 @@ class SignClassifier:
         sign.makecnnmodel()
         sign.training()
         sign.drawlossgraph()
-        if len(sign.y_test) == 0:
+        if sign.train_test_rate == 0:
             print('No test data exists')
         else:
             sign.testevaluate()
@@ -276,7 +282,7 @@ class SignClassifier:
             raise e
         else:
             sign.model.summary()
-            if len(sign.y_test) == 0:
+            if sign.train_test_rate == 0:
                 print('No test data exists')
             else:
                 sign.testevaluate()
@@ -340,7 +346,7 @@ def serialize_read(filepath: Path):
 
 def run(subj: int):
     # ディープラーニング実行
-    sign = SignClassifier.deeplearning(f'{str(Path.cwd())}/dataset_individual/{subj}')
+    sign = SignClassifier.deeplearning(f'{str(Path.cwd())}')
 
     # 保存済みモデル再構築
     #sign = SignClassifier.reconstructmodel(f'{str(Path.cwd())}/dataset_individual/{subj}')
@@ -348,7 +354,7 @@ def run(subj: int):
     # gradcam起動
     cam = GradCam(sign)
 
-    if len(sign.y_test) == 0:
+    if sign.train_test_rate == 0:
         pass
     else:
         # failureとクラスごとのディレクトリ作成
