@@ -13,26 +13,26 @@ from keras.utils.image_utils import array_to_img, img_to_array, load_img, save_i
 class GradCam:
     def __init__(self, trained_model):
         self.trained_model = trained_model
-        self.save_dir = self.trained_model.wd / 'test_result'
+        self.save_dir = self.trained_model.cnf.wd / 'test_result'
         #shutil.rmtree(self.save_dir, ignore_errors=True)
         self.save_dir.mkdir(exist_ok=True)
         (self.save_dir / 'failure').mkdir(exist_ok=True)
 
-    def get_cam(self, img: np.ndarray) -> np.ndarray:
+    def get_cam(self, arr: np.ndarray) -> np.ndarray:
         # 対象画像、次元追加(読み込む画像が1枚なため、次元を増やしておかないとmodel.predictが出来ない)
-        img = img
+        img = arr
         img_wide = np.expand_dims(img, axis=0)
 
         # GradCAM用に出力を最終CNNマップ(self.last_conv)とsoftmaxとしたモデルを作成(Functional API)
         grad_model = tf.keras.Model([self.trained_model.model.inputs],\
-            [self.trained_model.model.get_layer(self.trained_model.last_layername).output,
+            [self.trained_model.model.get_layer(self.trained_model.cnf.last_layername).output,
             self.trained_model.model.output])
 
         # tapeにself.last_convの出力からout(prediction結果)までの計算を保存
         with tf.GradientTape() as tape:
             # shape: (layercol, layerrow, layerchannel), (outputs,)
             conv_outputs, predictions = grad_model(img_wide)
-            if self.trained_model.lossfunc == 'binary_crossentropy':
+            if self.trained_model.cnf.lossfunc == 'binary_crossentropy':
                 class_idx = 0 if predictions[0] < 0.5 else 1
                 loss = predictions[0][0]
             else:
@@ -66,7 +66,7 @@ class GradCam:
         cam_relu = np.maximum(cam, 0)
         # camをリサイズ(OpenCVの指定は横×縦になることに注意)
         cam_resized = cv2.resize(
-            cam_relu, (self.trained_model.input_shape[1], self.trained_model.input_shape[0])
+            cam_relu, (self.trained_model.cnf.input_shape[1], self.trained_model.cnf.input_shape[0])
             , cv2.INTER_LINEAR
             ) # shape: (layercol, layerrow)
 
@@ -86,16 +86,25 @@ class GradCam:
 
         return out, class_idx              # shape: (1,)
 
-    def save_img(self, img: np.ndarray, save_dir: Path, save_name: Path, extension='.png'):
+    def save_img(self, img: np.ndarray, save_dir: Path, save_name: str, extension='.png'):
+        """imgをsave_dirにsave_nameの名前+拡張子extensionというファイル名で保存
+        """
+
         output_filename = f'{save_name}{extension}'
         output_filepath = save_dir / output_filename
         cv2.imwrite(str(output_filepath), img)
 
     def batch_singularize(self):
-        for i, batch in zip(tqdm(range(math.ceil(self.trained_model.test_generator.samples / self.trained_model.batchsize))), self.trained_model.test_generator):
+        """ジェネレータから生成されるテストデータを順にGradCAMにかけ保存
+        """
+
+        # batchのloop
+        for i, batch in zip(tqdm(range(math.ceil(self.trained_model.test_generator.samples / self.trained_model.cnf.batchsize))), self.trained_model.test_generator):
+            # batch内のloop
             for j, img_and_label in enumerate(zip(tqdm(batch[0]), batch[1])):
                 img, label = img_and_label[0], img_and_label[1]
-                test_no = i * self.trained_model.batchsize + j
+                test_no = i * self.trained_model.cnf.batchsize + j
+                # GradCAM 取得
                 cam, pred = self.get_cam(img)
                 self.save_img(img * 255, self.save_dir, f'{test_no}_a{label}_p{pred}')
                 self.save_img(cam, self.save_dir, f'{test_no}_a{label}_p{pred}_cam')
