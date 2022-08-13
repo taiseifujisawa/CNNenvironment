@@ -1,38 +1,57 @@
+# set seed
+from keras import backend as K
+K.clear_session()
+import os
+RANDOM_SEED = 1
+os.environ['PYTHONHASHSEED'] = str(RANDOM_SEED)
+os.environ['TF_DETERMINISTIC_OPS'] = 'true'
+os.environ['TF_CUDNN_DETERMINISTIC'] = 'true'
 import tensorflow as tf
-import matplotlib.pyplot as plt
-from pathlib import Path
 import numpy as np
 import random
+tf.random.set_seed(RANDOM_SEED)
+np.random.seed(RANDOM_SEED)
+random.seed(RANDOM_SEED)
+
+
+import matplotlib.pyplot as plt
+from pathlib import Path
 from keras.optimizers import Adam, SGD
 
 
 class CnnConfig:
   def __init__(self):
-    RANDOM_SEED = 1
-    tf.random.set_seed(RANDOM_SEED)
-    np.random.seed(RANDOM_SEED)
-    random.seed(RANDOM_SEED)
+    # seed
+    self.random_seed = 1
+    tf.random.set_seed(self.random_seed)
+    np.random.seed(self.random_seed)
+    random.seed(self.random_seed)
 
+    # file structure
+    self.wd = Path.cwd()
+    self.datasetdir = self.wd / 'dataset'
+    self.splitted_datasetdir = self.wd / 'dataset_splitted'
+    self.model_savefile = 'my_model.h5'
+    self.load_mode = 'directory'
+
+    # learning
     self.train_test_rate = 0.2
     self.validation_rate = 0.2
-    self.input_shape = (250, 1000)      # numpy, (row, column)
-    self.outputs = 2
     self.optimizer = Adam(learning_rate=0.001)
     self.lossfunc = 'sparse_categorical_crossentropy'
     self.epochs = 100
     self.batchsize = 16
-    self.color = 'grayscale'
-
-    self.wd = Path.cwd()
-    self.datasetdir = self.wd / 'dataset'
-    self.splitted_datasetdir = self.wd / 'dataset_splitted'
-    self.model_name = 'my_model'
-    self.model_savefile = 'my_model.h5'
-    self.last_layername = "last_conv"
-
+    # callback
     self.earlystopping_patience = 5
     self.reducelearningrate_patience = 2
     self.minimum_learningrate = 0.0001
+
+    # cnn structure
+    self.input_shape = (250, 1000)      # numpy, (row, column)
+    self.outputs = 2
+    self.color = 'grayscale'
+    self.model_name = 'my_model'
+    self.last_layername = "last_conv"
 
 
 class Cifar10Config:
