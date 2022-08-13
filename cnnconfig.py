@@ -14,9 +14,8 @@ np.random.seed(RANDOM_SEED)
 random.seed(RANDOM_SEED)
 
 
-import matplotlib.pyplot as plt
 from pathlib import Path
-from keras.optimizers import Adam, SGD
+from keras.optimizers import SGD, RMSprop, Adam, Adadelta, Adagrad, Adamax, Nadam, Ftrl
 
 
 class CnnConfig:
