@@ -1,112 +1,144 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from pathlib import Path
 import numpy as np
 import math
 import random
-import cv2
-from PIL import Image
-import pickle
-from tqdm import tqdm
 import traceback
 import shutil
-from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard, ModelCheckpoint
 from keras.preprocessing.image import ImageDataGenerator
-from keras.utils.image_utils import array_to_img, img_to_array, load_img, save_img
+from keras.utils import to_categorical
+
 from grad_cam import GradCam
 from cnn import sign_classifier_cnn
 from cnnconfig import CnnConfig
 
 
 class SignClassifier:
-    def __init__(self):
+    def __init__(self, cnf):
         """cnnの諸元の設定
         """
-        self.cnf = CnnConfig()
+        self.cnf = cnf
 
-    def loaddataset(self):
+    def loaddataset(self, dataset=None):    # 呼び出しはself.cnf.load_modeで分ける
         """データの読み込み、成形、data augmentation
         """
         print('\n====================\n\nloaddataset\n\n====================\n')
 
-        # ディレクトリ初期化
-        shutil.rmtree(self.cnf.splitted_datasetdir, ignore_errors=True)
-        # シャッフルして分割
-        for d in self.cnf.datasetdir.iterdir():
-            # シャッフル
-            imgs_shuffled = random.sample(list(d.iterdir()), len(list(d.iterdir())))
-            # 分割
-            imgs_test = imgs_shuffled[:int(len(imgs_shuffled) * self.cnf.train_test_rate)]
-            imgs_rest = imgs_shuffled[int(len(imgs_shuffled) * self.cnf.train_test_rate):]
-            imgs_validation = imgs_rest[:int(len(imgs_rest) * self.cnf.train_test_rate)]
-            imgs_train = imgs_rest[int(len(imgs_rest) * self.cnf.train_test_rate):]
+        ## データの読み込み
+        # ディレクトリ構造から読み込む場合
+        if dataset == None:
+            # ディレクトリ初期化
+            shutil.rmtree(self.cnf.splitted_datasetdir, ignore_errors=True)
+            # シャッフルして分割
+            for d in self.cnf.datasetdir.iterdir():
+                # シャッフル
+                imgs_shuffled = random.sample(list(d.iterdir()), len(list(d.iterdir())))
+                # 分割
+                imgs_test = imgs_shuffled[:int(len(imgs_shuffled) * self.cnf.train_test_rate)]
+                imgs_rest = imgs_shuffled[int(len(imgs_shuffled) * self.cnf.train_test_rate):]
+                imgs_validation = imgs_rest[:int(len(imgs_rest) * self.cnf.train_test_rate)]
+                imgs_train = imgs_rest[int(len(imgs_rest) * self.cnf.train_test_rate):]
 
-            # 分割したファイルを置くディレクトリ作成
-            (self.cnf.splitted_datasetdir /'train' / d.name).mkdir(parents=True, exist_ok=True)
-            (self.cnf.splitted_datasetdir / 'validation' / d.name).mkdir(parents=True, exist_ok=True)
-            (self.cnf.splitted_datasetdir / 'test' / d.name).mkdir(parents=True, exist_ok=True)
-            # 元データセットからそれぞれの分割先へコピー
-            for i in imgs_train:
-                shutil.copy(i, self.cnf.splitted_datasetdir / 'train' / d.name)
-            for i in imgs_validation:
-                shutil.copy(i, self.cnf.splitted_datasetdir / 'validation' / d.name)
-            for i in imgs_test:
-                shutil.copy(i, self.cnf.splitted_datasetdir / 'test' / d.name)
+                # 分割したファイルを置くディレクトリ作成
+                (self.cnf.splitted_datasetdir /'train' / d.name).mkdir(parents=True, exist_ok=True)
+                (self.cnf.splitted_datasetdir / 'validation' / d.name).mkdir(parents=True, exist_ok=True)
+                (self.cnf.splitted_datasetdir / 'test' / d.name).mkdir(parents=True, exist_ok=True)
+                # 元データセットからそれぞれの分割先へコピー
+                for i in imgs_train:
+                    shutil.copy(i, self.cnf.splitted_datasetdir / 'train' / d.name)
+                for i in imgs_validation:
+                    shutil.copy(i, self.cnf.splitted_datasetdir / 'validation' / d.name)
+                for i in imgs_test:
+                    shutil.copy(i, self.cnf.splitted_datasetdir / 'test' / d.name)
+        # 既にあるデータセットから読み込む場合
+        else:
+            self.cnf.lossfunc = 'categorical_crossentropy'
+            (x_train, y_train), (x_test, y_test) = dataset
+            # 出力ノード数をデータセットから検出し書き換え
+            self.cnf.outputs = max(y_test) + 1
+            y_train = to_categorical(y_train)
+            y_test = to_categorical(y_test)
 
-        # 全画像を[0, 1]へ正規化(data augmentationを行える)
-        idg = ImageDataGenerator(rescale=1.0 / 255)
-
-        class_mode = {
-            'categorical_crossentropy': 'categorical',
-            'binary_crossentropy': 'binary',
-            'sparse_categorical_crossentropy': 'sparse',
-        }
-
-        # train dataのジェネレータ
-        print('train data: ', end='')
-        self.train_generator = idg.flow_from_directory(
-            self.cnf.splitted_datasetdir / 'train',
-            target_size=self.cnf.input_shape,
-            color_mode=self.cnf.color,
-            shuffle=True,
-            class_mode=class_mode[self.cnf.lossfunc],
-            batch_size=self.cnf.batchsize
+        ## data augmentationの設定(正規化含む)
+        # ディレクトリ構造から読み込む場合
+        if dataset == None:
+            idg = ImageDataGenerator(rescale=1.0/self.cnf.max_pixelvalue, **self.cnf.da_cnf)
+        # 既にあるデータセットから読み込む場合
+        else:
+            idg = ImageDataGenerator(
+                rescale=1.0/self.cnf.max_pixelvalue,
+                validation_split=self.cnf.validation_rate,
+                **self.cnf.da_cnf
             )
+        idg_test = ImageDataGenerator(rescale=1.0/self.cnf.max_pixelvalue)
 
-        # validation dataのジェネレータ
-        print('validation data: ', end='')
-        self.validation_generator = idg.flow_from_directory(
-            self.cnf.splitted_datasetdir / 'validation',
-            target_size=self.cnf.input_shape,
-            color_mode=self.cnf.color,
-            shuffle=True,
-            class_mode=class_mode[self.cnf.lossfunc],
-            batch_size=self.cnf.batchsize
-            )
-
-        # test dataのジェネレータ
-        print('test data: ', end='')
-        self.test_generator = idg.flow_from_directory(
-            self.cnf.splitted_datasetdir / 'test',
-            target_size=self.cnf.input_shape,
-            color_mode=self.cnf.color,
-            shuffle=False,
-            class_mode=class_mode[self.cnf.lossfunc],
-            batch_size=self.cnf.batchsize
-            )
-
-        # ディレクトリ名とラベルの対応を表示
-        print(
-            'labels of train data: {}\nlabels of validation data: {}\nlabels of test data: {}'
-            .format(
-                self.train_generator.class_indices,
-                self.validation_generator.class_indices,
-                self.test_generator.class_indices
+        ## ジェネレータの作成
+        # ディレクトリ構造から読み込む場合
+        if dataset == None:
+            # 変換
+            class_mode = {
+                'categorical_crossentropy': 'categorical',
+                'binary_crossentropy': 'binary',
+                'sparse_categorical_crossentropy': 'sparse',
+            }
+            # train dataのジェネレータ
+            print('train data: ', end='')
+            self.train_generator = idg.flow_from_directory(
+                self.cnf.splitted_datasetdir / 'train',
+                target_size=self.cnf.input_shape,
+                color_mode=self.cnf.color,
+                shuffle=True,
+                class_mode=class_mode[self.cnf.lossfunc],
+                batch_size=self.cnf.batchsize
                 )
-            )
+            # validation dataのジェネレータ
+            print('validation data: ', end='')
+            self.validation_generator = idg.flow_from_directory(
+                self.cnf.splitted_datasetdir / 'validation',
+                target_size=self.cnf.input_shape,
+                color_mode=self.cnf.color,
+                shuffle=True,
+                class_mode=class_mode[self.cnf.lossfunc],
+                batch_size=self.cnf.batchsize
+                )
+            # test dataのジェネレータ
+            print('test data: ', end='')
+            self.test_generator = idg_test.flow_from_directory(
+                self.cnf.splitted_datasetdir / 'test',
+                target_size=self.cnf.input_shape,
+                color_mode=self.cnf.color,
+                shuffle=False,
+                class_mode=class_mode[self.cnf.lossfunc],
+                batch_size=self.cnf.batchsize
+                )
+            # 出力ノード数をデータセットから検出し書き換え
+            self.cnf.outputs = len(self.train_generator.class_indices)
+            # ディレクトリ名とラベルの対応を表示
+            print(
+                'labels of train data: {}\nlabels of validation data: {}\nlabels of test data: {}'
+                .format(
+                    self.train_generator.class_indices,
+                    self.validation_generator.class_indices,
+                    self.test_generator.class_indices
+                    )
+                )
+        # 既にあるデータセットから読み込む場合
+        else:
+            # train dataのジェネレータ
+            print(f'train data: Found {math.ceil(len(y_train) * (1 - self.cnf.validation_rate))} images belonging to {self.cnf.outputs} classes.')
+            self.train_generator = idg.flow(
+            x_train, y_train, self.cnf.batchsize, True, subset="training")
+            # validation dataのジェネレータ
+            print(f'validation data: Found {len(y_train) - math.ceil(len(y_train) * (1 - self.cnf.validation_rate))} images belonging to {self.cnf.outputs} classes.')
+            self.validation_generator = idg.flow(
+            x_train, y_train, self.cnf.batchsize, True, subset="validation")
+            # test dataのジェネレータ
+            print(f'test data: Found {len(y_test)} images belonging to {self.cnf.outputs} classes.')
+            self.test_generator = idg_test.flow(
+            x_test, y_test, self.cnf.batchsize, False)
 
-        # data augmentationチェック用
+        ## data augmentationチェック
         def plotImages(images_arr):
             fig, axes = plt.subplots(1, 5, figsize=(10,10))
             axes = axes.flatten()
@@ -114,13 +146,14 @@ class SignClassifier:
                 ax.imshow(img)
                 ax.axis('off')
             plt.tight_layout()
+            fig.suptitle('Examples of train data with data augmentation')
             plt.show()
         def check():
             training_images, training_labels = next(self.train_generator)
             print(training_labels[:5])
             plotImages(training_images[:5])
         # チェックするとき呼ぶ
-        #check()
+        check()
         pass
 
     def makecnnmodel(self):
@@ -272,7 +305,8 @@ class SignClassifier:
 
 
 def main():
-    sign = SignClassifier()
+    cnf = CnnConfig()
+    sign = SignClassifier(cnf)
 
     # ディープラーニング実行
     sign.deeplearning()
