@@ -11,7 +11,7 @@ from keras.utils import to_categorical
 
 from grad_cam import GradCam
 from cnn import sign_classifier_cnn, cifar10_cnn
-from cnnconfig import CnnConfig, Cifar10Config2
+from cnnconfig import CnnConfig, Cifar10Config2, Cifar10Config3
 
 from keras.datasets import cifar10
 
@@ -30,7 +30,7 @@ class SignClassifier:
 
         ## データの読み込み
         # ディレクトリ構造から読み込む場合
-        if dataset == None:
+        if self.cnf.load_mode == 'directory':
             # ディレクトリ初期化
             shutil.rmtree(self.cnf.splitted_datasetdir, ignore_errors=True)
             # シャッフルして分割
@@ -56,16 +56,19 @@ class SignClassifier:
                     shutil.copy(i, self.cnf.splitted_datasetdir / 'test' / d.name)
         # 既にあるデータセットから読み込む場合
         else:
+            assert dataset != None, 'set dataset in an argument'
             self.cnf.lossfunc = 'categorical_crossentropy'
             (x_train, y_train), (x_test, y_test) = dataset
             # 出力ノード数をデータセットから検出し書き換え
             self.cnf.outputs = y_test.max() + 1
+            self.len_y_train = len(y_train)
+            self.len_y_test = len(y_test)
             y_train = to_categorical(y_train)
             y_test = to_categorical(y_test)
 
         ## data augmentationの設定(正規化含む)
         # ディレクトリ構造から読み込む場合
-        if dataset == None:
+        if self.cnf.load_mode == 'directory':
             idg = ImageDataGenerator(rescale=1.0/self.cnf.max_pixelvalue, **self.cnf.da_cnf)
         # 既にあるデータセットから読み込む場合
         else:
@@ -78,7 +81,7 @@ class SignClassifier:
 
         ## ジェネレータの作成
         # ディレクトリ構造から読み込む場合
-        if dataset == None:
+        if self.cnf.load_mode == 'directory':
             # 変換
             class_mode = {
                 'categorical_crossentropy': 'categorical',
@@ -143,7 +146,7 @@ class SignClassifier:
 
         ## data augmentationチェック
         def plotImages(images_arr):
-            fig, axes = plt.subplots(1, 5, figsize=(10,10))
+            fig, axes = plt.subplots(2, 5, figsize=(10,10))
             axes = axes.flatten()
             for img, ax in zip( images_arr, axes):
                 ax.imshow(img)
@@ -153,8 +156,8 @@ class SignClassifier:
             plt.show()
         def check():
             training_images, training_labels = next(self.train_generator)
-            print(training_labels[:5])
-            plotImages(training_images[:5])
+            print(training_labels[:10])
+            plotImages(training_images[:10])
         # チェックするとき呼ぶ
         check()
         pass
@@ -170,24 +173,23 @@ class SignClassifier:
         """
         print('\n====================\n\ntraining\n\n====================\n')
 
-        # delete tensorboard logdir
+        ## delete tensorboard logdir
         log_dir = self.cnf.wd / f'tensorboard_{self.cnf.model_name}'
         try:
             shutil.rmtree(str(log_dir))
         except:
             pass
 
-        # callbacks
+        ## callbacks
         early_stopping = EarlyStopping(
                         monitor='val_loss',
-                        min_delta=0.0,
-                        patience=5
+                        patience=self.cnf.earlystopping_patience
                 )
         reduce_lr = ReduceLROnPlateau(
                                 monitor='val_loss',
-                                factor=0.5,
-                                patience=2,
-                                min_lr=0.0001
+                                factor=self.cnf.reducelearningrate_factor,
+                                patience=self.cnf.reducelearningrate_patience,
+                                min_lr=self.cnf.minimum_learningrate
                         )
         tensor_board = TensorBoard(
             log_dir=self.cnf.wd / f'tensorboard_{self.cnf.model_name}',
@@ -203,18 +205,33 @@ class SignClassifier:
             save_weights_only=False
         )
 
-        # 学習
-        self.history = self.model.fit(
-            self.train_generator,
-            steps_per_epoch=math.ceil(self.train_generator.samples / self.cnf.batchsize),
-            validation_data=self.validation_generator,
-            validation_steps=math.ceil(self.validation_generator.samples / self.cnf.batchsize),
-            epochs=self.cnf.epochs,
-            verbose=1,
-            callbacks=[early_stopping, reduce_lr, tensor_board, check_point])
-        self.model.save(self.cnf.wd / f'last_{self.cnf.model_savefile}')
-        self.model = tf.keras.models.load_model(self.cnf.wd / f'best_{self.cnf.model_savefile}'
-        )
+        ## 学習
+        # ディレクトリ構造から読み込む場合
+        if self.cnf.load_mode == 'directory':
+            self.history = self.model.fit(
+                self.train_generator,
+                steps_per_epoch=math.ceil(self.train_generator.samples / self.cnf.batchsize),
+                validation_data=self.validation_generator,
+                validation_steps=math.ceil(self.validation_generator.samples / self.cnf.batchsize),
+                epochs=self.cnf.epochs,
+                verbose=1,
+                callbacks=[early_stopping, reduce_lr, tensor_board, check_point])
+            self.model.save(self.cnf.wd / f'last_{self.cnf.model_savefile}')
+            self.model = tf.keras.models.load_model(self.cnf.wd / f'best_{self.cnf.model_savefile}'
+            )
+        else:
+            self.history = self.model.fit(
+                self.train_generator,
+                steps_per_epoch=math.ceil(self.len_y_train * (1 - self.cnf.validation_rate) / self.cnf.batchsize),
+                validation_data=self.validation_generator,
+                validation_steps=math.ceil(self.len_y_train * self.cnf.validation_rate / self.cnf.batchsize),
+                epochs=self.cnf.epochs,
+                verbose=1,
+                callbacks=[early_stopping, reduce_lr, tensor_board, check_point])
+            self.model.save(self.cnf.wd / f'last_{self.cnf.model_savefile}')
+            self.model = tf.keras.models.load_model(self.cnf.wd / f'best_{self.cnf.model_savefile}'
+            )
+
 
     def drawlossgraph(self):
         """損失関数の描画
@@ -273,8 +290,8 @@ class SignClassifier:
         print('\n********************\n\ndeeplearning\n\n********************\n')
         assert self.cnf.train_test_rate != 1, 'No train data exists. It is no use you having NN learn.'
         dataset = cifar10.load_data()
-        #self.loaddataset(dataset)
-        self.loaddataset()
+        self.loaddataset(dataset)
+        #self.loaddataset()
         self.makecnnmodel()
         self.training()
         self.drawlossgraph()
@@ -311,6 +328,7 @@ class SignClassifier:
 
 def main():
     cnf = CnnConfig()
+    cnf = Cifar10Config3()
     sign = SignClassifier(cnf)
 
     # ディープラーニング実行
