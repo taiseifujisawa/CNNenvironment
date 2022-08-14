@@ -124,7 +124,7 @@ class GradCam:
                 for i, batch in zip(tqdm(range(loop_batch)), self.trained_model.test_generator):
                     # batch内のloop
                     for j, img_and_label in enumerate(zip(batch[0], batch[1])):
-                        img, label = img_and_label[0], img_and_label[1]
+                        img, label = img_and_label[0], int(img_and_label[1])
                         test_no = i * self.trained_model.cnf.batchsize + j
                         # GradCAM 取得
                         cam, pred = self.get_cam(img)
