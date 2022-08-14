@@ -11,9 +11,9 @@ from keras.utils import to_categorical
 
 from grad_cam import GradCam
 from cnn import sign_classifier_cnn, cifar10_cnn
-from cnnconfig import CnnConfig, Cifar10Config2, Cifar10Config3
+from cnnconfig import CnnConfig, Cifar10Config2, Cifar10Config3, MnistConfig
 
-from keras.datasets import cifar10
+from keras.datasets import cifar10, mnist
 
 
 
@@ -59,6 +59,10 @@ class SignClassifier:
             assert dataset != None, 'set dataset in an argument'
             self.cnf.lossfunc = 'categorical_crossentropy'
             (x_train, y_train), (x_test, y_test) = dataset
+            if x_train.ndim == 3:
+                x_train = np.expand_dims(x_train, axis=-1)
+            if x_test.ndim == 3:
+                x_test = np.expand_dims(x_test, axis=-1)
             # 出力ノード数をデータセットから検出し書き換え
             self.cnf.outputs = y_test.max() + 1
             self.len_y_train = len(y_train)
@@ -294,11 +298,12 @@ class SignClassifier:
         """
         print('\n********************\n\ndeeplearning\n\n********************\n')
         assert self.cnf.train_test_rate != 1, 'No train data exists. It is no use you having NN learn.'
-        dataset = cifar10.load_data()
-        #self.loaddataset(dataset)
-        self.loaddataset()
-        cnn = sign_classifier_cnn(self.cnf)
-        #cnn = cifar10_cnn(self.cnf)
+        #dataset = cifar10.load_data()
+        dataset = mnist.load_data()
+        self.loaddataset(dataset)
+        #self.loaddataset()
+        #cnn = sign_classifier_cnn(self.cnf)
+        cnn = cifar10_cnn(self.cnf)
         self.makecnnmodel(cnn)
         self.training()
         self.drawlossgraph()
@@ -336,6 +341,7 @@ class SignClassifier:
 def main():
     cnf = CnnConfig()
     #cnf = Cifar10Config3()
+    cnf = MnistConfig()
     sign = SignClassifier(cnf)
 
     # ディープラーニング実行
