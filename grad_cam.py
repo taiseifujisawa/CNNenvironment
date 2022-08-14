@@ -99,8 +99,8 @@ class GradCam:
         """ジェネレータから生成されるテストデータを順にGradCAMにかけ保存
         """
 
-        loop_batch = min(maxbatch_savefig, math.ceil(self.trained_model.len_y_train / self.trained_model.cnf.batchsize))
         if self.trained_model.cnf.load_mode == 'database':
+            loop_batch = min(maxbatch_savefig, math.ceil(self.trained_model.len_y_train / self.trained_model.cnf.batchsize))
             # batchのloop
             for i, batch in zip(tqdm(range(loop_batch)), self.trained_model.test_generator):
                 # batch内のloop
@@ -116,6 +116,7 @@ class GradCam:
                         self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
                         self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
         elif self.trained_model.cnf.load_mode == 'directory':
+            loop_batch = min(maxbatch_savefig, math.ceil(self.trained_model.test_generator.samples / self.trained_model.cnf.batchsize))
             # batchのloop
             for i, batch in zip(tqdm(range(loop_batch)), self.trained_model.test_generator):
                 # batch内のloop
