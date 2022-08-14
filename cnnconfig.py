@@ -47,8 +47,6 @@ class CnnConfig:
 
     # cnn structure
     self.input_shape = (250, 1000)      # numpy, (row, column)
-    self.outputs = 2    \
-            if self.lossfunc != 'binary_crossentropy' else 1  # do not change this line
     self.color = 'grayscale'
     self.model_name = 'my_model'
     self.last_layername = "last_conv"
