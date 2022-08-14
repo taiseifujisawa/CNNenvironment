@@ -71,16 +71,16 @@ class GradCam:
         #    with open('grad_vanish.csv', 'a') as f:
         #        f.write('gradient vanished\n')
         # make heatmap
-        heatmap = cam_resized / cam_resized.max() * 255       # shape: (layercol, layerrow)
+        heatmap = cam_resized / cam_resized.max() * self.trained_model.cnf.max_pixelvalue       # shape: (layercol, layerrow)
         # apply color
         hm_colored = cv2.applyColorMap(np.uint8(heatmap), cv2.COLORMAP_JET)    # shape: (layercol, layerrow)
 
         if self.trained_model.cnf.color == 'rgb':
             # opencv形式に変換
-            org_img = cv2.cvtColor(np.uint8(img * 255), cv2.COLOR_RGB2BGR)
+            org_img = cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR)
         else:
             # 白黒画像をカラー化
-            org_img = cv2.cvtColor(np.uint8(img * 255), cv2.COLOR_GRAY2BGR)     # shape: (layercol, layerrow)
+            org_img = cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_GRAY2BGR)     # shape: (layercol, layerrow)
 
         # 合成
         out = cv2.addWeighted(src1=org_img, alpha=0.4, src2=hm_colored, beta=0.6, gamma=0)     # shape: (layercol, layerrow)
@@ -100,18 +100,20 @@ class GradCam:
         """
 
         if self.trained_model.cnf.load_mode == 'dataset':
-            for i, img_and_label in enumerate(zip(self.trained_model.x_test, tqdm(self.trained_model.y_test))):
+            #for i, img_and_label in zip(tqdm(range(math.ceil(len(self.trained_model.test_generator.x) / self.trained_model.cnf.batchsize))), self.trained_model.test_generator):
+            #で下と統合できるはず(self.trained_model.test_generator.xはImageDataGeneratorの戻り値NumpyArrayGeneratorのメンバー変数)
+            for i, batch in enumerate(zip(self.trained_model.x_test, tqdm(self.trained_model.y_test))):
                 if i == 100:
                     break
                 img, label = img_and_label[0], int(img_and_label[1])
                 test_no = i
                 # GradCAM 取得
                 cam, pred = self.get_cam(img)
-                self.save_img(cv2.cvtColor(np.uint8(img * 255), cv2.COLOR_RGB2BGR), self.save_dir, f'{test_no}_a{label}_p{pred}')
+                self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir, f'{test_no}_a{label}_p{pred}')
                 self.save_img(cam, self.save_dir, f'{test_no}_a{label}_p{pred}_cam')
 
                 if label != pred:
-                    self.save_img(cv2.cvtColor(np.uint8(img * 255), cv2.COLOR_RGB2BGR), self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
+                    self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
                     self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
         else:
             # batchのloop
@@ -122,9 +124,9 @@ class GradCam:
                     test_no = i * self.trained_model.cnf.batchsize + j
                     # GradCAM 取得
                     cam, pred = self.get_cam(img)
-                    self.save_img(img * 255, self.save_dir, f'{test_no}_a{label}_p{pred}')
+                    self.save_img(img * self.trained_model.cnf.max_pixelvalue, self.save_dir, f'{test_no}_a{label}_p{pred}')
                     self.save_img(cam, self.save_dir, f'{test_no}_a{label}_p{pred}_cam')
 
                     if label != pred:
-                        self.save_img(img * 255, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
+                        self.save_img(img * self.trained_model.cnf.max_pixelvalue, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
                         self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
