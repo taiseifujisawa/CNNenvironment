@@ -18,7 +18,7 @@ from pathlib import Path
 from keras.optimizers import SGD, RMSprop, Adam, Adadelta, Adagrad, Adamax, Nadam, Ftrl
 
 
-class CnnConfig:
+class SignConfig:
   def __init__(self):
     # seed
     self.random_seed = 1
@@ -72,64 +72,7 @@ class CnnConfig:
       #'vertical_flip': True,
     }
 
-
 class Cifar10Config:
-  def __init__(self):
-    RANDOM_SEED = 1
-    tf.random.set_seed(RANDOM_SEED)
-    np.random.seed(RANDOM_SEED)
-    random.seed(RANDOM_SEED)
-
-    self.train_test_rate = 0.2
-    self.validation_rate = 0.2
-    self.input_shape = (32, 32)      # numpy, (row, column)
-    self.outputs = 10
-    self.optimizer = Adam()
-    self.lossfunc = 'sparse_categorical_crossentropy'
-    self.epochs = 20
-    self.batchsize = 128
-    self.color = 'rgb'
-
-    self.wd = Path.cwd()
-    self.datasetdir = self.wd / 'dataset'
-    self.splitted_datasetdir = self.wd / 'dataset_splitted'
-    self.model_name = 'my_model'
-    self.model_savefile = 'my_model.h5'
-    self.last_layername = "last_conv"
-
-    self.earlystopping_patience = 5
-    self.reducelearningrate_patience = 2
-    self.minimum_learningrate = 0.0001
-
-class Cifar10Config2:
-  def __init__(self):
-    RANDOM_SEED = 1
-    tf.random.set_seed(RANDOM_SEED)
-    np.random.seed(RANDOM_SEED)
-    random.seed(RANDOM_SEED)
-
-    self.train_test_rate = 0.2
-    self.validation_rate = 0.2
-    self.input_shape = (32, 32)      # numpy, (row, column)
-    self.outputs = 10
-    self.optimizer = Adam()
-    self.lossfunc = 'categorical_crossentropy'
-    self.epochs = 20
-    self.batchsize = 128
-    self.color = 'rgb'
-
-    self.wd = Path.cwd()
-    self.datasetdir = self.wd / 'dataset'
-    self.splitted_datasetdir = self.wd / 'dataset_splitted'
-    self.model_name = 'my_model'
-    self.model_savefile = 'my_model.h5'
-    self.last_layername = "last_conv"
-
-    self.earlystopping_patience = 5
-    self.reducelearningrate_patience = 2
-    self.minimum_learningrate = 0.0001
-
-class Cifar10Config3:
   def __init__(self):
     # seed
     self.random_seed = 1
