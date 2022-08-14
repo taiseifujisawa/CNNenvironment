@@ -6,7 +6,7 @@
 - cnnの構造はcnn.pyのように関数で定義しインポートする(ex: `from cnn import cifar10_cnn`)
 
 ## example of use
-`py -m ./example.py`
+`py -3.6 ./example.py`
 
 ## To do
 - ~gradcamがまだカラー非対応~
