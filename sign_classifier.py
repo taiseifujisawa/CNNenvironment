@@ -10,8 +10,11 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.utils import to_categorical
 
 from grad_cam import GradCam
-from cnn import sign_classifier_cnn
-from cnnconfig import CnnConfig
+from cnn import sign_classifier_cnn, cifar10_cnn
+from cnnconfig import CnnConfig, Cifar10Config2
+
+from keras.datasets import cifar10
+
 
 
 class SignClassifier:
@@ -56,7 +59,7 @@ class SignClassifier:
             self.cnf.lossfunc = 'categorical_crossentropy'
             (x_train, y_train), (x_test, y_test) = dataset
             # 出力ノード数をデータセットから検出し書き換え
-            self.cnf.outputs = max(y_test) + 1
+            self.cnf.outputs = y_test.max() + 1
             y_train = to_categorical(y_train)
             y_test = to_categorical(y_test)
 
@@ -269,6 +272,8 @@ class SignClassifier:
         """
         print('\n********************\n\ndeeplearning\n\n********************\n')
         assert self.cnf.train_test_rate != 1, 'No train data exists. It is no use you having NN learn.'
+        dataset = cifar10.load_data()
+        #self.loaddataset(dataset)
         self.loaddataset()
         self.makecnnmodel()
         self.training()
