@@ -169,6 +169,7 @@ class SignClassifier:
         """
         print('\n====================\n\nmakecnnmodel\n\n====================\n')
         self.model = cnn
+        self.model.summary()
 
     def training(self):
         """訓練
