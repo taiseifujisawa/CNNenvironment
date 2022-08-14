@@ -99,39 +99,42 @@ class GradCam:
         """ジェネレータから生成されるテストデータを順にGradCAMにかけ保存
         """
 
-        if self.trained_model.cnf.load_mode == 'database':
-            loop_batch = min(maxbatch_savefig, math.ceil(self.trained_model.len_y_train / self.trained_model.cnf.batchsize))
-            # batchのloop
-            for i, batch in zip(tqdm(range(loop_batch)), self.trained_model.test_generator):
-                # batch内のloop
-                for j, img_and_label in enumerate(zip(batch[0], batch[1])):
-                    img, label = img_and_label[0], int(np.where(img_and_label[1] == 1)[0])
-                    test_no = i * self.trained_model.cnf.batchsize + j
-                    # GradCAM 取得
-                    cam, pred = self.get_cam(img)
-                    self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir, f'{test_no}_a{label}_p{pred}')
-                    self.save_img(cam, self.save_dir, f'{test_no}_a{label}_p{pred}_cam')
-
-                    if label != pred:
-                        self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
-                        self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
-        elif self.trained_model.cnf.load_mode == 'directory':
-            loop_batch = min(maxbatch_savefig, math.ceil(self.trained_model.test_generator.samples / self.trained_model.cnf.batchsize))
-            # batchのloop
-            for i, batch in zip(tqdm(range(loop_batch)), self.trained_model.test_generator):
-                # batch内のloop
-                for j, img_and_label in enumerate(zip(batch[0], batch[1])):
-                    img, label = img_and_label[0], img_and_label[1]
-                    test_no = i * self.trained_model.cnf.batchsize + j
-                    # GradCAM 取得
-                    cam, pred = self.get_cam(img)
-                    self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir, f'{test_no}_a{label}_p{pred}')
-                    self.save_img(cam, self.save_dir, f'{test_no}_a{label}_p{pred}_cam')
-
-                    if label != pred:
-                        self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
-                        self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
-                if i == maxbatch_savefig:
-                    break
+        if self.trained_model.cnf.train_test_rate == 0:
+            pass
         else:
-            raise NameError('invalid value was set to "self.cnf.load_mode". check cnnconfig.py.')
+            if self.trained_model.cnf.load_mode == 'database':
+                loop_batch = min(maxbatch_savefig, math.ceil(self.trained_model.len_y_train / self.trained_model.cnf.batchsize))
+                # batchのloop
+                for i, batch in zip(tqdm(range(loop_batch)), self.trained_model.test_generator):
+                    # batch内のloop
+                    for j, img_and_label in enumerate(zip(batch[0], batch[1])):
+                        img, label = img_and_label[0], int(np.where(img_and_label[1] == 1)[0])
+                        test_no = i * self.trained_model.cnf.batchsize + j
+                        # GradCAM 取得
+                        cam, pred = self.get_cam(img)
+                        self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir, f'{test_no}_a{label}_p{pred}')
+                        self.save_img(cam, self.save_dir, f'{test_no}_a{label}_p{pred}_cam')
+
+                        if label != pred:
+                            self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
+                            self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
+            elif self.trained_model.cnf.load_mode == 'directory':
+                loop_batch = min(maxbatch_savefig, math.ceil(self.trained_model.test_generator.samples / self.trained_model.cnf.batchsize))
+                # batchのloop
+                for i, batch in zip(tqdm(range(loop_batch)), self.trained_model.test_generator):
+                    # batch内のloop
+                    for j, img_and_label in enumerate(zip(batch[0], batch[1])):
+                        img, label = img_and_label[0], img_and_label[1]
+                        test_no = i * self.trained_model.cnf.batchsize + j
+                        # GradCAM 取得
+                        cam, pred = self.get_cam(img)
+                        self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir, f'{test_no}_a{label}_p{pred}')
+                        self.save_img(cam, self.save_dir, f'{test_no}_a{label}_p{pred}_cam')
+
+                        if label != pred:
+                            self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
+                            self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
+                    if i == maxbatch_savefig:
+                        break
+            else:
+                raise NameError('invalid value was set to "self.cnf.load_mode". check cnnconfig.py.')
