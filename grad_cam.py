@@ -95,40 +95,45 @@ class GradCam:
         output_filepath = save_dir / output_filename
         cv2.imwrite(str(output_filepath), img)
 
-    def batch_singularize(self):
+    def batch_singularize(self, maxbatch_savefig=5):
         """ジェネレータから生成されるテストデータを順にGradCAMにかけ保存
         """
 
-        if self.trained_model.cnf.load_mode == 'dataset':
-            #for i, img_and_label in zip(tqdm(range(math.ceil(len(self.trained_model.test_generator.x) / self.trained_model.cnf.batchsize))), self.trained_model.test_generator):
-            #で下と統合できるはず(self.trained_model.test_generator.xはImageDataGeneratorの戻り値NumpyArrayGeneratorのメンバー変数)
-            for i, batch in enumerate(zip(self.trained_model.x_test, tqdm(self.trained_model.y_test))):
-                if i == 100:
-                    break
-                img, label = img_and_label[0], int(img_and_label[1])
-                test_no = i
-                # GradCAM 取得
-                cam, pred = self.get_cam(img)
-                self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir, f'{test_no}_a{label}_p{pred}')
-                self.save_img(cam, self.save_dir, f'{test_no}_a{label}_p{pred}_cam')
-
-                if label != pred:
-                    self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
-                    self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
-        elif self.cnf.load_mode == 'directory':
+        if self.trained_model.cnf.load_mode == 'database':
             # batchのloop
-            for i, batch in zip(tqdm(range(math.ceil(self.trained_model.test_generator.samples / self.trained_model.cnf.batchsize))), self.trained_model.test_generator):
+            for i, batch in zip(range(math.ceil(self.trained_model.len_y_train / self.trained_model.cnf.batchsize)), self.trained_model.test_generator):
+                if i == maxbatch_savefig:
+                    break
+                # batch内のloop
+                for j, img_and_label in enumerate(zip(tqdm(batch[0]), batch[1])):
+                    img, label = img_and_label[0], int(np.where(img_and_label[1] == 1)[0])
+                    test_no = i * self.trained_model.cnf.batchsize + j
+                    # GradCAM 取得
+                    cam, pred = self.get_cam(img)
+                    self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir, f'{test_no}_a{label}_p{pred}')
+                    self.save_img(cam, self.save_dir, f'{test_no}_a{label}_p{pred}_cam')
+
+                    if label != pred:
+                        self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
+                        self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
+        elif self.trained_model.cnf.load_mode == 'directory':
+            # batchのloop
+            for i, batch in zip(range(math.ceil(self.trained_model.test_generator.samples / self.trained_model.cnf.batchsize)), self.trained_model.test_generator):
+                if i == maxbatch_savefig:
+                    break
                 # batch内のloop
                 for j, img_and_label in enumerate(zip(tqdm(batch[0]), batch[1])):
                     img, label = img_and_label[0], img_and_label[1]
                     test_no = i * self.trained_model.cnf.batchsize + j
                     # GradCAM 取得
                     cam, pred = self.get_cam(img)
-                    self.save_img(img * self.trained_model.cnf.max_pixelvalue, self.save_dir, f'{test_no}_a{label}_p{pred}')
+                    self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir, f'{test_no}_a{label}_p{pred}')
                     self.save_img(cam, self.save_dir, f'{test_no}_a{label}_p{pred}_cam')
 
                     if label != pred:
-                        self.save_img(img * self.trained_model.cnf.max_pixelvalue, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
+                        self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
                         self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
+                if i == maxbatch_savefig:
+                    break
         else:
             raise NameError('invalid value was set to "self.cnf.load_mode". check cnnconfig.py.')
