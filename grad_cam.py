@@ -95,17 +95,16 @@ class GradCam:
         output_filepath = save_dir / output_filename
         cv2.imwrite(str(output_filepath), img)
 
-    def batch_singularize(self, maxbatch_savefig=5):
+    def gradcam_batch(self, maxbatch_savefig=5):
         """ジェネレータから生成されるテストデータを順にGradCAMにかけ保存
         """
 
+        loop_batch = min(maxbatch_savefig, math.ceil(self.trained_model.len_y_train / self.trained_model.cnf.batchsize))
         if self.trained_model.cnf.load_mode == 'database':
             # batchのloop
-            for i, batch in zip(range(math.ceil(self.trained_model.len_y_train / self.trained_model.cnf.batchsize)), self.trained_model.test_generator):
-                if i == maxbatch_savefig:
-                    break
+            for i, batch in zip(tqdm(range(loop_batch)), self.trained_model.test_generator):
                 # batch内のloop
-                for j, img_and_label in enumerate(zip(tqdm(batch[0]), batch[1])):
+                for j, img_and_label in enumerate(zip(batch[0], batch[1])):
                     img, label = img_and_label[0], int(np.where(img_and_label[1] == 1)[0])
                     test_no = i * self.trained_model.cnf.batchsize + j
                     # GradCAM 取得
@@ -118,11 +117,9 @@ class GradCam:
                         self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
         elif self.trained_model.cnf.load_mode == 'directory':
             # batchのloop
-            for i, batch in zip(range(math.ceil(self.trained_model.test_generator.samples / self.trained_model.cnf.batchsize)), self.trained_model.test_generator):
-                if i == maxbatch_savefig:
-                    break
+            for i, batch in zip(tqdm(range(loop_batch)), self.trained_model.test_generator):
                 # batch内のloop
-                for j, img_and_label in enumerate(zip(tqdm(batch[0]), batch[1])):
+                for j, img_and_label in enumerate(zip(batch[0], batch[1])):
                     img, label = img_and_label[0], img_and_label[1]
                     test_no = i * self.trained_model.cnf.batchsize + j
                     # GradCAM 取得

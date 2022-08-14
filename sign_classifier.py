@@ -355,7 +355,7 @@ def main():
     if sign.cnf.train_test_rate == 0:
         pass
     else:
-        cam.batch_singularize()
+        cam.gradcam_batch()
 
 
 if __name__ == '__main__':
