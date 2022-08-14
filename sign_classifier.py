@@ -295,10 +295,10 @@ class SignClassifier:
         print('\n********************\n\ndeeplearning\n\n********************\n')
         assert self.cnf.train_test_rate != 1, 'No train data exists. It is no use you having NN learn.'
         dataset = cifar10.load_data()
-        self.loaddataset(dataset)
-        #self.loaddataset()
-        #cnn = sign_classifier_cnn(self.cnf)
-        cnn = cifar10_cnn(self.cnf)
+        #self.loaddataset(dataset)
+        self.loaddataset()
+        cnn = sign_classifier_cnn(self.cnf)
+        #cnn = cifar10_cnn(self.cnf)
         self.makecnnmodel(cnn)
         self.training()
         self.drawlossgraph()
@@ -335,7 +335,7 @@ class SignClassifier:
 
 def main():
     cnf = CnnConfig()
-    cnf = Cifar10Config3()
+    #cnf = Cifar10Config3()
     sign = SignClassifier(cnf)
 
     # ディープラーニング実行

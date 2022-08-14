@@ -40,7 +40,7 @@ class CnnConfig:
     self.validation_rate = 0.2
     self.optimizer = Adam(learning_rate=0.001)
     self.lossfunc = 'sparse_categorical_crossentropy'
-    self.epochs = 1
+    self.epochs = 20
     self.batchsize = 16
     # callback
     self.earlystopping_patience = 5
@@ -68,8 +68,8 @@ class CnnConfig:
       #'cval': 0.,
       #'horizontal_flip': False,
       #'vertical_flip': False,
-      'horizontal_flip': True,
-      'vertical_flip': True,
+      #'horizontal_flip': True,
+      #'vertical_flip': True,
     }
 
 
