@@ -1,19 +1,6 @@
-# set seed
-from keras import backend as K
-K.clear_session()
-import os
-RANDOM_SEED = 1
-os.environ['PYTHONHASHSEED'] = str(RANDOM_SEED)
-os.environ['TF_DETERMINISTIC_OPS'] = 'true'
-os.environ['TF_CUDNN_DETERMINISTIC'] = 'true'
 import tensorflow as tf
 import numpy as np
 import random
-tf.random.set_seed(RANDOM_SEED)
-np.random.seed(RANDOM_SEED)
-random.seed(RANDOM_SEED)
-
-
 from pathlib import Path
 from keras.optimizers import SGD, RMSprop, Adam, Adadelta, Adagrad, Adamax, Nadam, Ftrl
 
@@ -22,14 +9,9 @@ class SignConfig:
   def __init__(self):
     # seed
     self.random_seed = 1
-    tf.random.set_seed(self.random_seed)
-    np.random.seed(self.random_seed)
-    random.seed(self.random_seed)
 
     # file structure
-    self.wd = Path.cwd() / 'learning'
-    self.wd.mkdir(exist_ok=True)
-
+    self.wd = Path.cwd() / 'learning'   # every file is saved
     self.datasetdir = Path.cwd() / 'dataset'
     self.splitted_datasetdir = Path.cwd() / 'dataset_splitted'
     self.model_savefile = 'my_model.h5'
