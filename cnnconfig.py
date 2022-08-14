@@ -11,7 +11,7 @@ class SignConfig:
     self.random_seed = 1
 
     # file structure
-    self.wd = Path.cwd() / 'learning'   # every file is saved
+    self.wd = Path.cwd() / 'learning_result'   # every file is saved
     self.datasetdir = Path.cwd() / 'dataset'
     self.splitted_datasetdir = Path.cwd() / 'dataset_splitted'
     self.model_savefile = 'my_model.h5'
