@@ -13,18 +13,28 @@ from grad_cam import GradCam
 from cnn import sign_classifier_cnn, cifar10_cnn
 from cnnconfig import CnnConfig, Cifar10Config2, Cifar10Config3, MnistConfig
 
-from keras.datasets import cifar10, mnist
+from keras.datasets import cifar10, mnist, fashion_mnist
 
 
 
-class SignClassifier:
+class DeepLearningCnnClassifier:
     def __init__(self, cnf):
         """cnnの諸元の設定
+
+        Args:
+            cnf (configclass): configuration
         """
         self.cnf = cnf
+        self.skip_training = False
 
-    def loaddataset(self, dataset=None):    # 呼び出しはself.cnf.load_modeで分ける
+    def loaddataset(self, dataset=None):
         """データの読み込み、成形、data augmentation
+
+        Args:
+            dataset (np.ndarray, optional): ((x_train, y_train), (x_test, y_test))型のデータセット. Defaults to None.
+
+        Raises:
+            NameError: _description_
         """
         print('\n====================\n\nloaddataset\n\n====================\n')
 
@@ -152,14 +162,16 @@ class SignClassifier:
 
         ## data augmentationチェック
         def plotImages(images_arr):
-            fig, axes = plt.subplots(2, 5, figsize=(10,10))
+            fig, axes = plt.subplots(2, 5, figsize=(10, 5))
             axes = axes.flatten()
             for img, ax in zip( images_arr, axes):
                 ax.imshow(img)
                 ax.axis('off')
             plt.tight_layout()
             fig.suptitle('Examples of train data with data augmentation')
-            plt.show()
+            plt.pause(10)
+            plt.clf()
+            plt.close()
         def check():
             training_images, training_labels = next(self.train_generator)
             print(training_labels[:10])
@@ -168,191 +180,206 @@ class SignClassifier:
         check()
         pass
 
-    def makecnnmodel(self, cnn=None):
+    def makecnnmodel(self, cnn_func=None, whether_train=True):
         """モデルの作成
+
+        Args:
+            cnn_func (function, optional): CNNモデルを生成する関数(カッコなし). Defaults to None.
+            whether_train (bool, optional): trainするかどうか. Defaults to True.
+
+        Raises:
+            e: 訓練しない場合、既存のモデルを読み込む。既存のモデルがない場合raise
         """
         print('\n====================\n\nmakecnnmodel\n\n====================\n')
-        self.model = cnn
+
+        if cnn_func != None and whether_train:
+            self.model = cnn_func(self.cnf)
+        else:
+            try:
+                self.model = tf.keras.models.load_model(self.cnf.wd / f'best_{self.cnf.model_savefile}')
+                self.skip_training = True
+            except OSError as e:
+                print("No model exists")
+                raise e
+
         self.model.summary()
 
     def training(self):
         """訓練
         """
-        print('\n====================\n\ntraining\n\n====================\n')
-
-        ## delete tensorboard logdir
-        log_dir = self.cnf.wd / f'tensorboard_{self.cnf.model_name}'
-        try:
-            shutil.rmtree(str(log_dir))
-        except:
+        if self.skip_training:  # 既存のモデルを読み込む場合
             pass
+        else:
+            print('\n====================\n\ntraining\n\n====================\n')
 
-        ## callbacks
-        early_stopping = EarlyStopping(
-                        monitor='val_loss',
-                        patience=self.cnf.earlystopping_patience
+            ## delete tensorboard logdir
+            log_dir = self.cnf.wd / f'tensorboard_{self.cnf.model_name}'
+            try:
+                shutil.rmtree(str(log_dir))
+            except:
+                pass
+
+            ## callbacks
+            early_stopping = EarlyStopping(
+                            monitor='val_loss',
+                            patience=self.cnf.earlystopping_patience
+                    )
+            reduce_lr = ReduceLROnPlateau(
+                                    monitor='val_loss',
+                                    factor=self.cnf.reducelearningrate_factor,
+                                    patience=self.cnf.reducelearningrate_patience,
+                                    min_lr=self.cnf.minimum_learningrate
+                            )
+            tensor_board = TensorBoard(
+                log_dir=self.cnf.wd / f'tensorboard_{self.cnf.model_name}',
+                histogram_freq=1,
+                write_graph=True,
+                write_images=True
+            )
+            check_point = ModelCheckpoint(
+                self.cnf.wd / f'best_{self.cnf.model_savefile}',
+                monitor='val_loss',
+                verbose=1,
+                save_best_only=True,
+                save_weights_only=False
+            )
+
+            ## 学習
+            # ディレクトリ構造から読み込む場合
+            if self.cnf.load_mode == 'directory':
+                self.history = self.model.fit(
+                    self.train_generator,
+                    steps_per_epoch=math.ceil(self.train_generator.samples / self.cnf.batchsize),
+                    validation_data=self.validation_generator,
+                    validation_steps=math.ceil(self.validation_generator.samples / self.cnf.batchsize),
+                    epochs=self.cnf.epochs,
+                    verbose=1,
+                    callbacks=[early_stopping, reduce_lr, tensor_board, check_point])
+                self.model.save(self.cnf.wd / f'last_{self.cnf.model_savefile}')
+                self.model = tf.keras.models.load_model(self.cnf.wd / f'best_{self.cnf.model_savefile}'
                 )
-        reduce_lr = ReduceLROnPlateau(
-                                monitor='val_loss',
-                                factor=self.cnf.reducelearningrate_factor,
-                                patience=self.cnf.reducelearningrate_patience,
-                                min_lr=self.cnf.minimum_learningrate
-                        )
-        tensor_board = TensorBoard(
-            log_dir=self.cnf.wd / f'tensorboard_{self.cnf.model_name}',
-            histogram_freq=1,
-            write_graph=True,
-            write_images=True
-        )
-        check_point = ModelCheckpoint(
-            self.cnf.wd / f'best_{self.cnf.model_savefile}',
-            monitor='val_loss',
-            verbose=1,
-            save_best_only=True,
-            save_weights_only=False
-        )
-
-        ## 学習
-        # ディレクトリ構造から読み込む場合
-        if self.cnf.load_mode == 'directory':
-            self.history = self.model.fit(
-                self.train_generator,
-                steps_per_epoch=math.ceil(self.train_generator.samples / self.cnf.batchsize),
-                validation_data=self.validation_generator,
-                validation_steps=math.ceil(self.validation_generator.samples / self.cnf.batchsize),
-                epochs=self.cnf.epochs,
-                verbose=1,
-                callbacks=[early_stopping, reduce_lr, tensor_board, check_point])
-            self.model.save(self.cnf.wd / f'last_{self.cnf.model_savefile}')
-            self.model = tf.keras.models.load_model(self.cnf.wd / f'best_{self.cnf.model_savefile}'
-            )
-        # 既にあるデータセットから読み込む場合
-        elif self.cnf.load_mode == 'database':
-            self.history = self.model.fit(
-                self.train_generator,
-                steps_per_epoch=math.ceil(self.len_y_train * (1 - self.cnf.validation_rate) / self.cnf.batchsize),
-                validation_data=self.validation_generator,
-                validation_steps=math.ceil(self.len_y_train * self.cnf.validation_rate / self.cnf.batchsize),
-                epochs=self.cnf.epochs,
-                verbose=1,
-                callbacks=[early_stopping, reduce_lr, tensor_board, check_point])
-            self.model.save(self.cnf.wd / f'last_{self.cnf.model_savefile}')
-            self.model = tf.keras.models.load_model(self.cnf.wd / f'best_{self.cnf.model_savefile}'
-            )
-
+            # 既にあるデータセットから読み込む場合
+            elif self.cnf.load_mode == 'database':
+                self.history = self.model.fit(
+                    self.train_generator,
+                    steps_per_epoch=math.ceil(self.len_y_train * (1 - self.cnf.validation_rate) / self.cnf.batchsize),
+                    validation_data=self.validation_generator,
+                    validation_steps=math.ceil(self.len_y_train * self.cnf.validation_rate / self.cnf.batchsize),
+                    epochs=self.cnf.epochs,
+                    verbose=1,
+                    callbacks=[early_stopping, reduce_lr, tensor_board, check_point])
+                self.model.save(self.cnf.wd / f'last_{self.cnf.model_savefile}')
+                self.model = tf.keras.models.load_model(self.cnf.wd / f'best_{self.cnf.model_savefile}'
+                )
 
     def drawlossgraph(self):
         """損失関数の描画
         """
-        print('\n====================\n\ndrawlossgraph\n\n====================\n')
-        loss     = self.history.history['loss']
-        nb_epoch = len(loss)
-        fig = plt.figure()
-        plt.plot(range(nb_epoch), loss,     marker='.', label='loss')
-        try:
-            val_loss = self.history.history['val_loss']
-        except KeyError:
-            print('The exception below was ignored')
-            print(traceback.format_exc())
-            print('No validation data exists')
-            with open(self.cnf.wd / 'trainlog.csv', 'w') as f:
-                f.write('epoch,loss,acc\n')
-                for ep, (ls, ac) in enumerate(zip(loss, self.history.history['accuracy'])):
-                    f.write(f'{ep},{ls},{ac}\n')
+        if self.skip_training:  # 既存のモデルを読み込む場合
+            pass
         else:
-            plt.plot(range(nb_epoch), val_loss, marker='.', label='val_loss')
-            with open(self.cnf.wd / 'trainlog.csv', 'w') as f:
-                f.write('epoch,loss,acc,val_loss,val_acc\n')
-                for ep, (ls, ac, vls, vac) in enumerate(zip(loss, self.history.history['accuracy'],
-                    val_loss, self.history.history['val_accuracy'])):
-                    f.write(f'{ep},{ls},{ac},{vls},{vac}\n')
-        finally:
-            plt.legend(loc='best', fontsize=10)
-            plt.grid()
-            plt.xlabel('epoch')
-            plt.ylabel('loss')
-            print("the graph of losses has been stored as \"Loss.png\"")
-            fig.savefig(self.cnf.wd / "Loss.png")
+            print('\n====================\n\ndrawlossgraph\n\n====================\n')
+            loss     = self.history.history['loss']
+            acc = self.history.history['accuracy']
+            nb_epoch = len(loss)
+            fig = plt.figure()
+            fig, ax1 = plt.subplots()
+            ax2 = ax1.twinx()
+            ax1.plot(range(nb_epoch), loss,     marker='.', label='train_loss', color='#984ea3')
+            ax2.plot(range(nb_epoch), acc,     marker='.', label='train_acc.', color='#377eb8')
+            try:
+                val_loss = self.history.history['val_loss']
+                val_acc = self.history.history['val_accuracy']
+            except KeyError:
+                print('The exception below was ignored')
+                print(traceback.format_exc())
+                print('No validation data exists')
+                with open(self.cnf.wd / 'trainlog.csv', 'w') as f:
+                    f.write('epoch,loss,acc\n')
+                    for ep, (ls, ac) in enumerate(zip(loss, self.history.history['accuracy'])):
+                        f.write(f'{ep},{ls},{ac}\n')
+            else:
+                ax1.plot(range(nb_epoch), val_loss, marker='.', label='val_loss', color='#ff7f00')
+                ax2.plot(range(nb_epoch), val_acc, marker='.', label='val_acc.', color='r')
+                with open(self.cnf.wd / 'trainlog.csv', 'w') as f:
+                    f.write('epoch,loss,acc,val_loss,val_acc\n')
+                    for ep, (ls, ac, vls, vac) in enumerate(zip(loss, self.history.history['accuracy'],
+                        val_loss, self.history.history['val_accuracy'])):
+                        f.write(f'{ep},{ls},{ac},{vls},{vac}\n')
+            finally:
+                h1, l1 = ax1.get_legend_handles_labels()
+                h2, l2 = ax2.get_legend_handles_labels()
+                ax1.legend(h1+h2, l1+l2, loc='center right', fontsize=10)
+                plt.grid()
+                plt.xlabel('epoch')
+                ax1.set_ylabel('loss')
+                ax2.set_ylabel('accuracy')
+                ax2.set_ylim(0.0, 1.0)
+                print("the graph of losses has been stored as \"Loss.png\"")
+                fig.savefig(self.cnf.wd / "Loss.png")
 
     def testevaluate(self):
         """テストデータによる評価
         """
-        print('\n====================\n\ntestevaluate\n\n====================\n')
-        test_loss, test_acc = self.model.evaluate(self.test_generator, verbose=1, batch_size=self.cnf.batchsize)
-        print('Test loss:', test_loss)
-        print('Test accuracy:', test_acc)
+
+        if self.cnf.train_test_rate == 0:
+            pass
+        else:
+            print('\n====================\n\ntestevaluate\n\n====================\n')
+            test_loss, test_acc = self.model.evaluate(self.test_generator, verbose=1, batch_size=self.cnf.batchsize)
+            print('Test loss:', test_loss)
+            print('Test accuracy:', test_acc)
 
     def prediction(self):
         """全テストデータで予測
         """
-        print('\n====================\n\nprediction\n\n====================\n')
-        predictions = self.model.predict(self.test_generator, verbose=1, batch_size=self.cnf.batchsize)
-        predictions = [np.argmax(pred) for pred in predictions]
-        answers = self.test_generator.classes if self.cnf.load_mode == 'directory'\
-                                            else np.where(self.test_generator.y == 1)[1]
-        print('Test result:')
-        print(tf.math.confusion_matrix(answers, predictions).numpy())
-
-    def deeplearning(self):
-        """ディープラーニングを実行
-        """
-        print('\n********************\n\ndeeplearning\n\n********************\n')
-        assert self.cnf.train_test_rate != 1, 'No train data exists. It is no use you having NN learn.'
-        #dataset = cifar10.load_data()
-        dataset = mnist.load_data()
-        self.loaddataset(dataset)
-        #self.loaddataset()
-        #cnn = sign_classifier_cnn(self.cnf)
-        cnn = cifar10_cnn(self.cnf)
-        self.makecnnmodel(cnn)
-        self.training()
-        self.drawlossgraph()
         if self.cnf.train_test_rate == 0:
-            print('No test data exists')
+            pass
         else:
-            self.testevaluate()
-            self.prediction()
-
-    def reconstructmodel(self):
-        """保存済みモデルの再構築
-
-        Raises:
-            e: 指定した名前の保存済みモデルがない場合
-
-        Returns:
-            sign: SignClassifierオブジェクト
-        """
-        print('\n********************\n\nreconstructmodel\n\n********************\n')
-        self.loaddataset()
-        try:
-            self.model = tf.keras.models.load_model(self.cnf.wd / f'best_{self.cnf.model_savefile}')
-        except OSError as e:
-            print("No model exists")
-            raise e
-        else:
-            self.model.summary()
-            if self.cnf.train_test_rate == 0:
-                print('No test data exists')
-            else:
-                self.testevaluate()
-                self.prediction()
+            print('\n====================\n\nprediction\n\n====================\n')
+            predictions = self.model.predict(self.test_generator, verbose=1, batch_size=self.cnf.batchsize)
+            predictions = [np.argmax(pred) for pred in predictions]
+            answers = self.test_generator.classes if self.cnf.load_mode == 'directory'\
+                                                else np.where(self.test_generator.y == 1)[1]
+            print('Test result:')
+            print(tf.math.confusion_matrix(answers, predictions).numpy())
 
 
 def main():
     cnf = CnnConfig()
-    #cnf = Cifar10Config3()
+    cnf = Cifar10Config3()
     cnf = MnistConfig()
-    sign = SignClassifier(cnf)
+
+    dl = DeepLearningCnnClassifier(cnf)
+
+    model = sign_classifier_cnn
+    model = cifar10_cnn
 
     # ディープラーニング実行
-    sign.deeplearning()
+    dataset = cifar10.load_data()
+    dataset = mnist.load_data()
+    #dataset = fashion_mnist.load_data()
 
-    # 保存済みモデル再構築
-    #sign.reconstructmodel()
+    dl.loaddataset(dataset)
+    #dl.loaddataset()
+
+    dl.makecnnmodel(model)
+    #dl.makecnnmodel()
+
+    dl.training()
+
+    dl.drawlossgraph()
+
+    if dl.cnf.train_test_rate == 0:
+        print('No test data exists')
+    else:
+        dl.testevaluate()
+        dl.prediction()
 
     # gradcam起動
-    cam = GradCam(sign)
-    if sign.cnf.train_test_rate == 0:
+    cam = GradCam(dl)
+
+    if dl.cnf.train_test_rate == 0:
         pass
     else:
         cam.gradcam_batch()
