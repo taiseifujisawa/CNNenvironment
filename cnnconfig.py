@@ -27,21 +27,24 @@ class CnnConfig:
     random.seed(self.random_seed)
 
     # file structure
-    self.wd = Path.cwd()
-    self.datasetdir = self.wd / 'dataset'
-    self.splitted_datasetdir = self.wd / 'dataset_splitted'
+    self.wd = Path.cwd() / 'learning'
+    self.wd.mkdir(exist_ok=True)
+
+    self.datasetdir = Path.cwd() / 'dataset'
+    self.splitted_datasetdir = Path.cwd() / 'dataset_splitted'
     self.model_savefile = 'my_model.h5'
-    self.load_mode = 'directory'
+    self.load_mode = 'director'
 
     # learning
     self.train_test_rate = 0.2
     self.validation_rate = 0.2
     self.optimizer = Adam(learning_rate=0.001)
     self.lossfunc = 'sparse_categorical_crossentropy'
-    self.epochs = 100
+    self.epochs = 1
     self.batchsize = 16
     # callback
     self.earlystopping_patience = 5
+    self.reducelearningrate_factor = 0.5
     self.reducelearningrate_patience = 2
     self.minimum_learningrate = 0.0001
 
@@ -65,6 +68,8 @@ class CnnConfig:
       #'cval': 0.,
       #'horizontal_flip': False,
       #'vertical_flip': False,
+      'horizontal_flip': True,
+      'vertical_flip': True,
     }
 
 
@@ -123,3 +128,57 @@ class Cifar10Config2:
     self.earlystopping_patience = 5
     self.reducelearningrate_patience = 2
     self.minimum_learningrate = 0.0001
+
+class Cifar10Config3:
+  def __init__(self):
+    # seed
+    self.random_seed = 1
+    tf.random.set_seed(self.random_seed)
+    np.random.seed(self.random_seed)
+    random.seed(self.random_seed)
+
+    # file structure
+    self.wd = Path.cwd() / 'learning'
+    self.wd.mkdir(exist_ok=True)
+
+    self.datasetdir = Path.cwd() / 'dataset'
+    self.splitted_datasetdir = Path.cwd() / 'dataset_splitted'
+    self.model_savefile = 'my_model.h5'
+    self.load_mode = 'director'
+
+    # learning
+    self.train_test_rate = 0.2
+    self.validation_rate = 0.2
+    self.optimizer = Adam(learning_rate=0.001)
+    self.lossfunc = 'sparse_categorical_crossentropy'
+    self.epochs = 1
+    self.batchsize = 16
+    # callback
+    self.earlystopping_patience = 5
+    self.reducelearningrate_factor = 0.5
+    self.reducelearningrate_patience = 2
+    self.minimum_learningrate = 0.0001
+
+    # cnn structure
+    self.input_shape = (32, 32)      # numpy, (row, column)
+    self.color = 'rgb'
+    self.model_name = 'my_model'
+    self.last_layername = "last_conv"
+    self.max_pixelvalue = 255.0
+
+    # data augmentation(do not enter 'validation_split' and 'rescale')
+    self.da_cnf = {
+      #'rotation_range': 0,
+      #'width_shift_range': 0.,
+      #'height_shift_range': 0.,
+      #'brightness_range': None,
+      #'shear_range': 0.,
+      #'zoom_range': 0.,
+      #'channel_shift_range': 0.,
+      #'fill_mode': 'nearest',
+      #'cval': 0.,
+      #'horizontal_flip': False,
+      #'vertical_flip': False,
+      'horizontal_flip': True,
+      'vertical_flip': True,
+    }
