@@ -224,13 +224,13 @@ class DeepLearningCnnClassifier:
                                     min_lr=self.cnf.minimum_learningrate
                             )
             tensor_board = TensorBoard(
-                log_dir=self.cnf.wd / f'tensorboard_{self.cnf.model_name}',
+                log_dir=str(self.cnf.wd / f'tensorboard_{self.cnf.model_name}'),
                 histogram_freq=1,
                 write_graph=True,
                 write_images=True
             )
             check_point = ModelCheckpoint(
-                self.cnf.wd / f'best_{self.cnf.model_savefile}',
+                str(self.cnf.wd / f'best_{self.cnf.model_savefile}'),
                 monitor='val_loss',
                 verbose=1,
                 save_best_only=True,
