@@ -33,7 +33,7 @@ class CnnConfig:
     self.datasetdir = Path.cwd() / 'dataset'
     self.splitted_datasetdir = Path.cwd() / 'dataset_splitted'
     self.model_savefile = 'my_model.h5'
-    self.load_mode = 'director'
+    self.load_mode = 'directory'
 
     # learning
     self.train_test_rate = 0.2
@@ -144,7 +144,7 @@ class Cifar10Config3:
     self.datasetdir = Path.cwd() / 'dataset'
     self.splitted_datasetdir = Path.cwd() / 'dataset_splitted'
     self.model_savefile = 'my_model.h5'
-    self.load_mode = 'director'
+    self.load_mode = 'database'
 
     # learning
     self.train_test_rate = 0.2
