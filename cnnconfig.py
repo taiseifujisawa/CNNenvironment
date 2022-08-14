@@ -13,7 +13,7 @@ class SignConfig:
     # file structure
     self.wd = Path.cwd() / 'learning_result'   # every file is saved
     self.datasetdir = Path.cwd() / 'dataset'
-    self.splitted_datasetdir = Path.cwd() / 'dataset_splitted'
+    self.splitted_datasetdir = self.wd / 'dataset_splitted'
     self.model_savefile = 'my_model.h5'
     self.load_mode = 'directory'
 
