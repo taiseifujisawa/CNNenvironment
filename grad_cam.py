@@ -83,7 +83,7 @@ class GradCam:
             org_img = cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_GRAY2BGR)     # shape: (layercol, layerrow)
 
         # 合成
-        out = cv2.addWeighted(src1=org_img, alpha=0.4, src2=hm_colored, beta=0.6, gamma=0)     # shape: (layercol, layerrow)
+        out = cv2.addWeighted(src1=org_img, alpha=0.6, src2=hm_colored, beta=0.4, gamma=0)     # shape: (layercol, layerrow)
 
         return out, class_idx              # shape: (1,)
 
