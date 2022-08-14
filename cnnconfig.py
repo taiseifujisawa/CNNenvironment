@@ -58,13 +58,9 @@ class Cifar10Config:
   def __init__(self):
     # seed
     self.random_seed = 1
-    tf.random.set_seed(self.random_seed)
-    np.random.seed(self.random_seed)
-    random.seed(self.random_seed)
 
     # file structure
     self.wd = Path.cwd() / 'learning'
-    self.wd.mkdir(exist_ok=True)
 
     self.datasetdir = Path.cwd() / 'dataset'
     self.splitted_datasetdir = Path.cwd() / 'dataset_splitted'
@@ -112,13 +108,9 @@ class MnistConfig:
   def __init__(self):
     # seed
     self.random_seed = 1
-    tf.random.set_seed(self.random_seed)
-    np.random.seed(self.random_seed)
-    random.seed(self.random_seed)
 
     # file structure
     self.wd = Path.cwd() / 'learning'
-    self.wd.mkdir(exist_ok=True)
 
     self.datasetdir = Path.cwd() / 'dataset'
     self.splitted_datasetdir = Path.cwd() / 'dataset_splitted'
