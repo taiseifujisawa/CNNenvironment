@@ -16,7 +16,6 @@ def sign_classifier_cnn(cnf):
     #tf.keras.layers.Dropout(0.5),
     tf.keras.layers.Dense(cnf.outputs, activation='softmax')
   ], name=cnf.model_name)
-  model.summary()
   model.compile(optimizer=cnf.optimizer, loss=cnf.lossfunc, metrics=['accuracy'])
 
   return model
@@ -39,7 +38,6 @@ def cifar10_cnn(cnf):
     tf.keras.layers.Dropout(0.5),
     tf.keras.layers.Dense(cnf.outputs, activation='softmax')
   ], name=cnf.model_name)
-  model.summary()
   model.compile(optimizer=cnf.optimizer, loss=cnf.lossfunc, metrics=['accuracy'])
 
   return model
