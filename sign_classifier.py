@@ -164,11 +164,11 @@ class SignClassifier:
         check()
         pass
 
-    def makecnnmodel(self):
+    def makecnnmodel(self, cnn=None):
         """モデルの作成
         """
         print('\n====================\n\nmakecnnmodel\n\n====================\n')
-        self.model = sign_classifier_cnn(self.cnf)
+        self.model = cnn
 
     def training(self):
         """訓練
@@ -283,7 +283,8 @@ class SignClassifier:
         print('\n====================\n\nprediction\n\n====================\n')
         predictions = self.model.predict(self.test_generator, verbose=1, batch_size=self.cnf.batchsize)
         predictions = [np.argmax(pred) for pred in predictions]
-        answers = self.test_generator.classes
+        answers = self.test_generator.classes if self.cnf.load_mode == 'directory'\
+                                            else np.where(self.test_generator.y == 1)[1]
         print('Test result:')
         print(tf.math.confusion_matrix(answers, predictions).numpy())
 
@@ -295,7 +296,9 @@ class SignClassifier:
         dataset = cifar10.load_data()
         self.loaddataset(dataset)
         #self.loaddataset()
-        self.makecnnmodel()
+        #cnn = sign_classifier_cnn(self.cnf)
+        cnn = cifar10_cnn(self.cnf)
+        self.makecnnmodel(cnn)
         self.training()
         self.drawlossgraph()
         if self.cnf.train_test_rate == 0:
