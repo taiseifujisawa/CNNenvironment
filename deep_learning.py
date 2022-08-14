@@ -19,6 +19,7 @@ class DeepLearningCnnClassifier:
         """
         self.cnf = cnf
         self.skip_training = False
+        cnf.wd.mkdir(exist_ok=True)
 
     def loaddataset(self, dataset=None):
         """データの読み込み、成形、data augmentation
