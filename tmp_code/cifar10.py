@@ -1,25 +1,21 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from pathlib import Path
 import numpy as np
 import math
 import random
-import cv2
-from PIL import Image
-import pickle
-from tqdm import tqdm
 import traceback
 import shutil
-from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard, ModelCheckpoint
 from keras.preprocessing.image import ImageDataGenerator
-#from keras.utils.image_utils import array_to_img, img_to_array, load_img, save_img
+from keras.utils import to_categorical
+
 from grad_cam import GradCam
 from cnn import cifar10_cnn
 from cnnconfig import Cifar10Config, Cifar10Config2
-from keras.datasets import cifar10
-from keras.utils import to_categorical
 
+from keras.datasets import cifar10
+#import ssl
+#ssl._create_default_https_context = ssl._create_unverified_context
 
 class Sifar10Classifier:
     def __init__(self):
@@ -34,21 +30,21 @@ class Sifar10Classifier:
         print('\n====================\n\nloaddataset\n\n====================\n')
 
         # ディレクトリ初期化
-        shutil.rmtree(self.cnf.splitted_datasetdir, ignore_errors=True)
+        #shutil.rmtree(self.cnf.splitted_datasetdir, ignore_errors=True)
         # シャッフルして分割
 
         # 全画像を[0, 1]へ正規化(data augmentationを行える)
         idg = ImageDataGenerator(
-            rescale=1.0 / 255, 
-            validation_split=self.cnf.validation_rate, 
-            horizontal_flip=True, vertical_flip=True, 
-            zoom_range=0.2, 
+            rescale=1.0 / 255,
+            validation_split=self.cnf.validation_rate,
+            horizontal_flip=True, vertical_flip=True,
+            zoom_range=0.2,
             rotation_range=20,
             width_shift_range=0.2,
             height_shift_range=0.2
             )
         idg_test = ImageDataGenerator(
-            rescale=1.0 / 255, 
+            rescale=1.0 / 255,
             )
 
 
