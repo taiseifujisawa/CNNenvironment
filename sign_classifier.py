@@ -55,7 +55,7 @@ class SignClassifier:
                 for i in imgs_test:
                     shutil.copy(i, self.cnf.splitted_datasetdir / 'test' / d.name)
         # 既にあるデータセットから読み込む場合
-        else:
+        elif self.cnf.load_mode == 'database':
             assert dataset != None, 'set dataset in an argument'
             self.cnf.lossfunc = 'categorical_crossentropy'
             (x_train, y_train), (x_test, y_test) = dataset
@@ -65,13 +65,15 @@ class SignClassifier:
             self.len_y_test = len(y_test)
             y_train = to_categorical(y_train)
             y_test = to_categorical(y_test)
+        else:
+            raise NameError('invalid value was set to "self.cnf.load_mode". check cnnconfig.py.')
 
         ## data augmentationの設定(正規化含む)
         # ディレクトリ構造から読み込む場合
         if self.cnf.load_mode == 'directory':
             idg = ImageDataGenerator(rescale=1.0/self.cnf.max_pixelvalue, **self.cnf.da_cnf)
         # 既にあるデータセットから読み込む場合
-        else:
+        elif self.cnf.load_mode == 'database':
             idg = ImageDataGenerator(
                 rescale=1.0/self.cnf.max_pixelvalue,
                 validation_split=self.cnf.validation_rate,
@@ -130,7 +132,7 @@ class SignClassifier:
                     )
                 )
         # 既にあるデータセットから読み込む場合
-        else:
+        elif self.cnf.load_mode == 'database':
             # train dataのジェネレータ
             print(f'train data: Found {math.ceil(len(y_train) * (1 - self.cnf.validation_rate))} images belonging to {self.cnf.outputs} classes.')
             self.train_generator = idg.flow(
@@ -219,7 +221,8 @@ class SignClassifier:
             self.model.save(self.cnf.wd / f'last_{self.cnf.model_savefile}')
             self.model = tf.keras.models.load_model(self.cnf.wd / f'best_{self.cnf.model_savefile}'
             )
-        else:
+        # 既にあるデータセットから読み込む場合
+        elif self.cnf.load_mode == 'database':
             self.history = self.model.fit(
                 self.train_generator,
                 steps_per_epoch=math.ceil(self.len_y_train * (1 - self.cnf.validation_rate) / self.cnf.batchsize),

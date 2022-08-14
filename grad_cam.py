@@ -115,7 +115,7 @@ class GradCam:
                 if label != pred:
                     self.save_img(cv2.cvtColor(np.uint8(img * self.trained_model.cnf.max_pixelvalue), cv2.COLOR_RGB2BGR), self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
                     self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
-        else:
+        elif self.cnf.load_mode == 'directory':
             # batchのloop
             for i, batch in zip(tqdm(range(math.ceil(self.trained_model.test_generator.samples / self.trained_model.cnf.batchsize))), self.trained_model.test_generator):
                 # batch内のloop
@@ -130,3 +130,5 @@ class GradCam:
                     if label != pred:
                         self.save_img(img * self.trained_model.cnf.max_pixelvalue, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}')
                         self.save_img(cam, self.save_dir / 'failure', f'{test_no}_a{label}_p{pred}_cam')
+        else:
+            raise NameError('invalid value was set to "self.cnf.load_mode". check cnnconfig.py.')
