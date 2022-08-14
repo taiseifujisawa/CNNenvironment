@@ -47,10 +47,27 @@ class CnnConfig:
 
     # cnn structure
     self.input_shape = (250, 1000)      # numpy, (row, column)
-    self.outputs = 2
+    self.outputs = 2    \
+            if self.lossfunc != 'binary_crossentropy' else 1  # do not change this line
     self.color = 'grayscale'
     self.model_name = 'my_model'
     self.last_layername = "last_conv"
+    self.max_pixelvalue = 255.0
+
+    # data augmentation(do not enter 'validation_split' and 'rescale')
+    self.da_cnf = {
+      #'rotation_range': 0,
+      #'width_shift_range': 0.,
+      #'height_shift_range': 0.,
+      #'brightness_range': None,
+      #'shear_range': 0.,
+      #'zoom_range': 0.,
+      #'channel_shift_range': 0.,
+      #'fill_mode': 'nearest',
+      #'cval': 0.,
+      #'horizontal_flip': False,
+      #'vertical_flip': False,
+    }
 
 
 class Cifar10Config:
