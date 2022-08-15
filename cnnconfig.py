@@ -80,7 +80,7 @@ class Cifar10Config:
     self.input_shape = (32, 32)      # numpy, (row, column)
     self.color = 'rgb'
     self.model_name = 'my_model'
-    self.last_layername = "vgg16"
+    self.last_layername = "last_layername"
     self.max_pixelvalue = 255.0
 
     # data augmentation(do not enter 'validation_split' and 'rescale')
