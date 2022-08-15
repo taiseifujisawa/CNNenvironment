@@ -1,6 +1,3 @@
-import tensorflow as tf
-import numpy as np
-import random
 from pathlib import Path
 from keras.optimizers import SGD, RMSprop, Adam, Adadelta, Adagrad, Adamax, Nadam, Ftrl
 
@@ -63,7 +60,6 @@ class Cifar10Config:
     self.wd = Path.cwd() / 'learning'
 
     self.datasetdir = Path.cwd() / 'dataset'
-    self.splitted_datasetdir = Path.cwd() / 'dataset_splitted'
     self.model_savefile = 'my_model.h5'
     self.load_mode = 'database'
 
@@ -113,7 +109,6 @@ class MnistConfig:
     self.wd = Path.cwd() / 'learning'
 
     self.datasetdir = Path.cwd() / 'dataset'
-    self.splitted_datasetdir = Path.cwd() / 'dataset_splitted'
     self.model_savefile = 'my_model.h5'
     self.load_mode = 'database'
 
