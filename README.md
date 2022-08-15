@@ -12,5 +12,3 @@
 - ~gradcamがまだカラー非対応~
 - ~callbackにpathlib使うと3.6ではエラーが出る~
 - ~keras.utils.image_utilsは3.6にはない~
-- deep_learning_cnn_class/deep_learning.py のloaddataset内でreshapeを行えるようにする(転移学習用)
-  - 引数でshapeを指定

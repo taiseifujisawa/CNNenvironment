@@ -5,9 +5,9 @@ import math
 import random
 import traceback
 import shutil
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard, ModelCheckpoint
-from keras.preprocessing.image import ImageDataGenerator
-from keras.utils import to_categorical
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard, ModelCheckpoint
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.utils import to_categorical
 
 
 class DeepLearningCnnClassifier:

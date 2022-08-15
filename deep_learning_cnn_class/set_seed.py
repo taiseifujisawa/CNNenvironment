@@ -1,5 +1,5 @@
 def set_seed(seed=1):
-  from keras import backend as K
+  from tensorflow.keras import backend as K
   K.clear_session()
   import os
   os.environ['PYTHONHASHSEED'] = str(seed)

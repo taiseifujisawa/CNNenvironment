@@ -2,7 +2,7 @@ from deep_learning_cnn_class import DeepLearningCnnClassifier, GradCam, set_seed
 from cnn import sign_classifier_cnn, cifar10_cnn, mnist_cnn
 from cnnconfig import SignConfig, Cifar10Config, MnistConfig
 
-from keras.datasets import cifar10, mnist, fashion_mnist
+from tensorflow.keras.datasets import cifar10, mnist, fashion_mnist
 
 
 def sign_classifier():

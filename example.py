@@ -2,7 +2,7 @@ from deep_learning_cnn_class import DeepLearningCnnClassifier, GradCam, set_seed
 from cnn import cifar10_cnn
 from cnnconfig import Cifar10Config
 
-from keras.datasets import cifar10
+from tensorflow.keras.datasets import cifar10
 
 
 cnf = Cifar10Config()
