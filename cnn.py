@@ -67,15 +67,17 @@ def mnist_cnn(cnf):
 def cifar10_cnn_vgg16transfer(cnf):
   from tensorflow.keras.applications.vgg16 import VGG16
   from tensorflow.keras.layers import Dense,MaxPooling2D,UpSampling2D,\
-    Dropout, Flatten, Input
+    Dropout, Flatten, Input, Conv2D
   from tensorflow.keras import Model
-  Vgg16 = VGG16(include_top=False,input_shape=(128,128,3))
+  Vgg16 = VGG16(include_top=False,input_shape=(256,256,3))
   for layer in Vgg16.layers[:15]:
     layer.trainable = False
   _input = Input((32,32,3))
   x = UpSampling2D((2,2))(_input)
   x = UpSampling2D((2,2))(x)
+  x = UpSampling2D((2,2))(x)
   x = Vgg16(x)
+  x = Conv2D(64,((2,2)), activation='relu', name=cnf.last_layername)(x)
   x = Flatten()(x)
   x = Dense(512, activation='relu')(x)
   x = Dropout(0.5)(x)
