@@ -21,7 +21,7 @@ class DeepLearningCnnClassifier:
         self.skip_training = False
         cnf.wd.mkdir(exist_ok=True)
 
-    def loaddataset(self, dataset=None):
+    def loaddataset(self, dataset=None, whether_da=False):
         """データの読み込み、成形、data augmentation
 
         Args:
@@ -163,16 +163,18 @@ class DeepLearningCnnClassifier:
                 ax.axis('off')
             plt.tight_layout()
             fig.suptitle('Examples of train data with data augmentation')
-            plt.pause(10)
+            plt.pause(5)
             plt.clf()
             plt.close()
         def check():
             training_images, training_labels = next(self.train_generator)
             print(training_labels[:10])
             plotImages(training_images[:10])
-        # チェックするとき呼ぶ
-        check()
-        pass
+        if whether_da:
+            # チェックするとき呼ぶ
+            check()
+        else:
+            pass
 
     def makecnnmodel(self, cnn_func=None, whether_train=True):
         """モデルの作成

@@ -15,7 +15,7 @@ dl.makecnnmodel(model_gen)
 #dl.makecnnmodel(model_gen, False)
 dl.training()
 dl.drawlossgraph()
-#dl.testevaluate()
+dl.testevaluate()
 dl.prediction()
 
 cam = GradCam(dl)
