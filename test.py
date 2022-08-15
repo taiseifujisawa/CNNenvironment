@@ -57,7 +57,27 @@ def cifar10_classifier():
   cam = GradCam(dl)
   cam.gradcam_batch()
 
+def cifar10_classifier_vgg16transfer():
+  cnf = Cifar10Config()
+  set_seed(cnf.random_seed)
+  dl = DeepLearningCnnClassifier(cnf)
+  from cnn import cifar10_cnn_vgg16transfer
+  model_gen = cifar10_cnn_vgg16transfer
+  dataset = cifar10.load_data()
+  dl.loaddataset(dataset)
+  dl.makecnnmodel(model_gen)
+  #dl.makecnnmodel(model_gen, False)
+  dl.training()
+  dl.drawlossgraph()
+  dl.testevaluate()
+  dl.prediction()
+
+  cam = GradCam(dl)
+  cam.gradcam_batch()
+
+
 if __name__ == '__main__':
   sign_classifier()
   #mnist_classifier()
   #cifar10_classifier()
+  #cifar10_classifier_vgg16transfer()
