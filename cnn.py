@@ -1,3 +1,4 @@
+from re import U
 import tensorflow as tf
 
 
@@ -59,6 +60,27 @@ def mnist_cnn(cnf):
     tf.keras.layers.Dropout(0.5),
     tf.keras.layers.Dense(cnf.outputs, activation='softmax')
   ], name=cnf.model_name)
+  model.compile(optimizer=cnf.optimizer, loss=cnf.lossfunc, metrics=['accuracy'])
+
+  return model
+
+def cifar10_cnn_vgg16transfer(cnf):
+  from tensorflow.keras.applications.vgg16 import VGG16
+  from tensorflow.keras.layers import Dense,MaxPooling2D,UpSampling2D,\
+    Dropout, Flatten, Input
+  from tensorflow.keras import Model
+  Vgg16 = VGG16(include_top=False,input_shape=(128,128,3))
+  for layer in Vgg16.layers[:15]:
+    layer.trainable = False
+  _input = Input((32,32,3))
+  x = UpSampling2D(_input)
+  x = UpSampling2D(x)
+  x = Vgg16(x)
+  x = Flatten()(x)
+  x = Dense(512, activation='relu')(x)
+  x = Dropout(0.5)(x)
+  output = Dense(10, activation='softmax')(x)
+  model = Model(inputs=_input, outputs=output)
   model.compile(optimizer=cnf.optimizer, loss=cnf.lossfunc, metrics=['accuracy'])
 
   return model

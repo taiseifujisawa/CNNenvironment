@@ -77,7 +77,7 @@ def cifar10_classifier_vgg16transfer():
 
 
 if __name__ == '__main__':
-  sign_classifier()
+  #sign_classifier()
   #mnist_classifier()
   #cifar10_classifier()
-  #cifar10_classifier_vgg16transfer()
+  cifar10_classifier_vgg16transfer()
