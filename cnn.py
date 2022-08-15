@@ -73,8 +73,8 @@ def cifar10_cnn_vgg16transfer(cnf):
   for layer in Vgg16.layers[:15]:
     layer.trainable = False
   _input = Input((32,32,3))
-  x = UpSampling2D(_input)
-  x = UpSampling2D(x)
+  x = UpSampling2D((2,2))(_input)
+  x = UpSampling2D((2,2))(x)
   x = Vgg16(x)
   x = Flatten()(x)
   x = Dense(512, activation='relu')(x)
