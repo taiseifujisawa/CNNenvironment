@@ -26,14 +26,15 @@ class DeepLearningCnnClassifier:
 
         Args:
             dataset (np.ndarray, optional): ((x_train, y_train), (x_test, y_test))型のデータセット. Defaults to None.
+            whether_da (bool, optional): data augmentationのチェックをするかしないか. Defaults to False.
 
         Raises:
-            NameError: _description_
+            NameError: データセットの読み込み方法の指定が不正の場合。cnfファイルを参照。
         """
         print('\n====================\n\nloaddataset\n\n====================\n')
 
         ## データの読み込み
-        # ディレクトリ構造から読み込む場合
+        # ディレクトリ構造から読み込み、自動でtrain,testを分割する場合
         if self.cnf.load_mode == 'directory':
             # ディレクトリ初期化
             shutil.rmtree(self.cnf.splitted_datasetdir, ignore_errors=True)
@@ -44,8 +45,8 @@ class DeepLearningCnnClassifier:
                 # 分割
                 imgs_test = imgs_shuffled[:int(len(imgs_shuffled) * self.cnf.train_test_rate)]
                 imgs_rest = imgs_shuffled[int(len(imgs_shuffled) * self.cnf.train_test_rate):]
-                imgs_validation = imgs_rest[:int(len(imgs_rest) * self.cnf.train_test_rate)]
-                imgs_train = imgs_rest[int(len(imgs_rest) * self.cnf.train_test_rate):]
+                imgs_validation = imgs_rest[:int(len(imgs_rest) * self.cnf.validation_rate)]
+                imgs_train = imgs_rest[int(len(imgs_rest) * self.cnf.validation_rate):]
 
                 # 分割したファイルを置くディレクトリ作成
                 (self.cnf.splitted_datasetdir /'train' / d.name).mkdir(parents=True, exist_ok=True)
@@ -58,6 +59,39 @@ class DeepLearningCnnClassifier:
                     shutil.copy(i, self.cnf.splitted_datasetdir / 'validation' / d.name)
                 for i in imgs_test:
                     shutil.copy(i, self.cnf.splitted_datasetdir / 'test' / d.name)
+
+        # train,testが分割されたディレクトリ構造から読み込む場合
+        elif self.cnf.load_mode == 'divided_directory':
+            train_dir = self.cnf.datasetdir / "train"
+            test_dir = self.cnf.datasetdir / "test"
+            # ディレクトリ初期化
+            shutil.rmtree(self.cnf.splitted_datasetdir, ignore_errors=True)
+            # train_dirをシャッフルして分割
+            for d in train_dir.iterdir():
+                # シャッフル
+                imgs_shuffled = random.sample(list(d.iterdir()), len(list(d.iterdir())))
+                # trainとvalidationに分割
+                imgs_validation = imgs_shuffled[:int(len(imgs_shuffled) * self.cnf.validation_rate)]
+                imgs_train = imgs_shuffled[int(len(imgs_shuffled) * self.cnf.validation_rate):]
+
+                # 分割したファイルを置くディレクトリ作成
+                (self.cnf.splitted_datasetdir /'train' / d.name).mkdir(parents=True, exist_ok=True)
+                (self.cnf.splitted_datasetdir / 'validation' / d.name).mkdir(parents=True, exist_ok=True)
+                # 元データセットからそれぞれの分割先へコピー
+                for i in imgs_train:
+                    shutil.copy(i, self.cnf.splitted_datasetdir / 'train' / d.name)
+                for i in imgs_validation:
+                    shutil.copy(i, self.cnf.splitted_datasetdir / 'validation' / d.name)
+            # test_dirをシャッフルして分割
+            for d in test_dir.iterdir():
+                # シャッフル
+                imgs_test = random.sample(list(d.iterdir()), len(list(d.iterdir())))
+                # 分割したファイルを置くディレクトリ作成
+                (self.cnf.splitted_datasetdir / 'test' / d.name).mkdir(parents=True, exist_ok=True)
+                # 元データセットからそれぞれの分割先へコピー
+                for i in imgs_test:
+                    shutil.copy(i, self.cnf.splitted_datasetdir / 'test' / d.name)
+
         # 既にあるデータセットから読み込む場合
         elif self.cnf.load_mode == 'database':
             assert dataset != None, 'set dataset in an argument'
@@ -78,7 +112,7 @@ class DeepLearningCnnClassifier:
 
         ## data augmentationの設定(正規化含む)
         # ディレクトリ構造から読み込む場合
-        if self.cnf.load_mode == 'directory':
+        if self.cnf.load_mode == 'directory' or self.cnf.load_mode == 'divided_directory':
             idg = ImageDataGenerator(rescale=1.0/self.cnf.max_pixelvalue, **self.cnf.da_cnf)
         # 既にあるデータセットから読み込む場合
         elif self.cnf.load_mode == 'database':
@@ -91,7 +125,7 @@ class DeepLearningCnnClassifier:
 
         ## ジェネレータの作成
         # ディレクトリ構造から読み込む場合
-        if self.cnf.load_mode == 'directory':
+        if self.cnf.load_mode == 'directory' or self.cnf.load_mode == 'divided_directory':
             # 変換
             class_mode = {
                 'categorical_crossentropy': 'categorical',
@@ -242,7 +276,7 @@ class DeepLearningCnnClassifier:
 
             ## 学習
             # ディレクトリ構造から読み込む場合
-            if self.cnf.load_mode == 'directory':
+            if self.cnf.load_mode == 'directory' or self.cnf.load_mode == 'divided_directory':
                 self.history = self.model.fit(
                     self.train_generator,
                     steps_per_epoch=math.ceil(self.train_generator.samples / self.cnf.batchsize),
