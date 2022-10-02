@@ -369,7 +369,7 @@ class DeepLearningCnnClassifier:
             print('\n====================\n\nprediction\n\n====================\n')
             predictions = self.model.predict(self.test_generator, verbose=1, batch_size=self.cnf.batchsize)
             predictions = [np.argmax(pred) for pred in predictions]
-            answers = self.test_generator.classes if self.cnf.load_mode == 'directory'\
+            answers = self.test_generator.classes if self.cnf.load_mode == 'directory' or self.cnf.load_mode == 'divided_directory'\
                                                 else np.where(self.test_generator.y == 1)[1]
             print('Test result:')
             print(tf.math.confusion_matrix(answers, predictions).numpy())
