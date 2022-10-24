@@ -233,6 +233,8 @@ class DeepLearningCnnClassifier:
                 raise e
 
         self.model.summary()
+        with open(self.cnf.wd / 'model_summary.txt', "w") as f:
+            self.model.summary(print_fn=lambda x: f.write(x + "\r\n"))
 
     def training(self):
         """訓練
@@ -324,14 +326,14 @@ class DeepLearningCnnClassifier:
                 print('The exception below was ignored')
                 print(traceback.format_exc())
                 print('No validation data exists')
-                with open(self.cnf.wd / 'trainlog.csv', 'w') as f:
+                with open(self.cnf.wd / 'log.csv', 'w') as f:
                     f.write('epoch,loss,acc\n')
                     for ep, (ls, ac) in enumerate(zip(loss, self.history.history['accuracy'])):
                         f.write(f'{ep},{ls},{ac}\n')
             else:
                 ax1.plot(range(nb_epoch), val_loss, marker='.', label='val_loss', color='#ff7f00')
                 ax2.plot(range(nb_epoch), val_acc, marker='.', label='val_acc.', color='r')
-                with open(self.cnf.wd / 'trainlog.csv', 'w') as f:
+                with open(self.cnf.wd / 'log.csv', 'w') as f:
                     f.write('epoch,loss,acc,val_loss,val_acc\n')
                     for ep, (ls, ac, vls, vac) in enumerate(zip(loss, self.history.history['accuracy'],
                         val_loss, self.history.history['val_accuracy'])):
@@ -359,6 +361,10 @@ class DeepLearningCnnClassifier:
             test_loss, test_acc = self.model.evaluate(self.test_generator, verbose=1, batch_size=self.cnf.batchsize)
             print('Test loss:', test_loss)
             print('Test accuracy:', test_acc)
+            with open(self.cnf.wd / 'log.csv', 'a') as f:
+                f.write('\nevaluation\n')
+                f.write('loss, accuracy\n')
+                f.write(f'{test_loss}, {test_acc}\n')
 
     def prediction(self):
         """全テストデータで予測
@@ -372,4 +378,11 @@ class DeepLearningCnnClassifier:
             answers = self.test_generator.classes if self.cnf.load_mode == 'directory' or self.cnf.load_mode == 'divided_directory'\
                                                 else np.where(self.test_generator.y == 1)[1]
             print('Test result:')
-            print(tf.math.confusion_matrix(answers, predictions).numpy())
+            mat = tf.math.confusion_matrix(answers, predictions).numpy()
+            print(mat)
+            with open(self.cnf.wd / 'log.csv', 'a') as f:
+                f.write('\nprediction\n')
+                for l in mat:
+                    for ele in l:
+                        f.write(f"{ele},")
+                    f.write("\n")
